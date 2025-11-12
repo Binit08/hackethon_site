@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     if (isActive !== null) query.isActive = isActive === "true"
 
     const problems = await Problem.find(query)
-      .populate('testCases', null, { isHidden: false })
+      .populate('testCases')
       .populate('mcqOptions')
       .sort({ createdAt: 1 })
       .lean()
@@ -44,13 +44,19 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!session) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+    }
+    
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Not authorized - Admin role required" }, { status: 403 })
     }
 
     await connectDB()
 
     const body = await request.json()
+    console.log("Received problem data:", body)
+    
     const {
       title,
       description,
@@ -68,7 +74,14 @@ export async function POST(request: Request) {
       round,
     } = body
 
-    const problem = await Problem.create({
+    if (!title || !description) {
+      return NextResponse.json(
+        { error: "Title and description are required" },
+        { status: 400 }
+      )
+    }
+
+    const problemData = {
       title,
       description,
       difficulty: difficulty || "MEDIUM",
@@ -76,12 +89,18 @@ export async function POST(request: Request) {
       points: points || 100,
       timeLimit: timeLimit || 5,
       memoryLimit: memoryLimit || 256,
-      constraints,
-      sampleInput,
-      sampleOutput,
-      correctAnswer,
+      constraints: constraints || null,
+      sampleInput: sampleInput || null,
+      sampleOutput: sampleOutput || null,
+      correctAnswer: correctAnswer || null,
       round: round || 1,
-    })
+    }
+
+    console.log("Creating problem with data:", problemData)
+
+    const problem = await Problem.create(problemData)
+
+    console.log("Problem created:", problem._id)
 
     // Create test cases if provided
     if (testCases && testCases.length > 0) {
@@ -109,6 +128,7 @@ export async function POST(request: Request) {
     return NextResponse.json(populatedProblem, { status: 201 })
   } catch (error: any) {
     console.error("Error creating problem:", error)
+    console.error("Error stack:", error.stack)
     return NextResponse.json(
       { error: error.message || "Internal server error" },
       { status: 500 }

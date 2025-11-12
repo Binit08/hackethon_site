@@ -77,6 +77,11 @@ export function Navbar() {
                 <Link href="/auth/register">
                   <Button size="sm" className="bg-[#7c4dff] hover:bg-[#6a3fff] text-white font-bold">Register</Button>
                 </Link>
+                <Link href="/admin/login">
+                  <Button size="sm" className="bg-[#ff6ab0] hover:bg-[#e2549b] text-white font-bold">
+                    Admin Login
+                  </Button>
+                </Link>
               </>
             )}
           </div>

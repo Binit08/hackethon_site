@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { useState, useEffect } from "react"
+import { signIn, useSession, getSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -11,14 +11,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast"
 
 export default function SignInPage() {
+  const { data: session } = useSession()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+  const isFormValid = email.trim() !== "" && password.trim() !== ""
+
+  // If already signed in, send user away immediately
+  useEffect(() => {
+    if (session?.user) {
+      router.replace(session.user.role === "ADMIN" ? "/admin" : "/dashboard")
+    }
+  }, [session, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading) return
     setLoading(true)
 
     try {
@@ -30,22 +40,25 @@ export default function SignInPage() {
 
       if (result?.error) {
         toast({
-          title: "Error",
-          description: "Invalid email or password",
+          title: "Sign in failed",
+          description: result.error || "Invalid email or password",
           variant: "destructive",
         })
       } else {
+        // Fetch updated session to get role
+        const newSession = await getSession()
+        const destination = newSession?.user?.role === "ADMIN" ? "/admin" : "/dashboard"
         toast({
-          title: "Success",
-          description: "Signed in successfully",
+          title: "Signed in",
+          description: "Welcome back!",
         })
-        router.push("/dashboard")
+        router.push(destination)
         router.refresh()
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: "Error",
-        description: "An error occurred. Please try again.",
+        title: "Unexpected error",
+        description: error?.message || "Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -63,7 +76,7 @@ export default function SignInPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" aria-busy={loading}>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -89,12 +102,16 @@ export default function SignInPage() {
                 autoComplete="current-password"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading || !isFormValid}
+            >
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
-            <span className="text-muted-foreground">Don't have an account? </span>
+            <span className="text-muted-foreground">Don&apos;t have an account? </span>
             <Link href="/auth/register" className="text-primary hover:underline">
               Register
             </Link>

@@ -269,36 +269,49 @@ function ProblemForm({
         : "/api/problems"
       const method = problem ? "PUT" : "POST"
 
+      console.log("Submitting problem:", formData)
+
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       })
 
+      console.log("Response status:", response.status)
+
       if (!response.ok) {
         const contentType = response.headers.get("content-type")
         if (contentType?.includes("application/json")) {
           const error = await response.json()
+          console.error("API error:", error)
           throw new Error(error.error || "Failed to save problem")
         } else {
-          throw new Error("Failed to save problem")
+          const text = await response.text()
+          console.error("Non-JSON error:", text)
+          throw new Error(`Failed to save problem: ${response.status}`)
         }
       }
 
       const contentType = response.headers.get("content-type")
       if (!contentType?.includes("application/json")) {
+        const text = await response.text()
+        console.error("Non-JSON success response:", text)
         throw new Error("Server returned non-JSON response")
       }
+
+      const result = await response.json()
+      console.log("Problem created/updated:", result)
 
       toast({
         title: "Success",
         description: `Problem ${problem ? "updated" : "created"} successfully`,
       })
       onSuccess()
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Form submission error:", error)
       toast({
         title: "Error",
-        description: "Failed to save problem",
+        description: error.message || "Failed to save problem",
         variant: "destructive",
       })
     } finally {
@@ -394,7 +407,76 @@ function ProblemForm({
             required
           />
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="timeLimit">Time Limit (min)</Label>
+          <Input
+            id="timeLimit"
+            type="number"
+            value={formData.timeLimit}
+            onChange={(e) =>
+              setFormData({ ...formData, timeLimit: parseInt(e.target.value) })
+            }
+            required
+          />
+        </div>
       </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="memoryLimit">Memory Limit (MB)</Label>
+        <Input
+          id="memoryLimit"
+          type="number"
+          value={formData.memoryLimit}
+          onChange={(e) =>
+            setFormData({ ...formData, memoryLimit: parseInt(e.target.value) })
+          }
+          required
+        />
+      </div>
+
+      {formData.type === "CODING" && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="constraints">Constraints (optional)</Label>
+            <textarea
+              id="constraints"
+              className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={formData.constraints}
+              onChange={(e) =>
+                setFormData({ ...formData, constraints: e.target.value })
+              }
+              placeholder="e.g., 1 <= n <= 10^5"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="sampleInput">Sample Input (optional)</Label>
+            <textarea
+              id="sampleInput"
+              className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={formData.sampleInput}
+              onChange={(e) =>
+                setFormData({ ...formData, sampleInput: e.target.value })
+              }
+              placeholder="Example input for testing"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="sampleOutput">Sample Output (optional)</Label>
+            <textarea
+              id="sampleOutput"
+              className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={formData.sampleOutput}
+              onChange={(e) =>
+                setFormData({ ...formData, sampleOutput: e.target.value })
+              }
+              placeholder="Expected output for the sample input"
+            />
+          </div>
+        </>
+      )}
 
       <Button type="submit" disabled={loading} className="w-full">
         {loading ? "Saving..." : problem ? "Update Problem" : "Create Problem"}
