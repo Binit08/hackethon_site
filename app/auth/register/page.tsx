@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { motion, AnimatePresence } from "framer-motion"
+import { UserPlus, User, Mail, Lock, Users } from "lucide-react"
 
 interface FormData {
   name: string
@@ -157,25 +158,28 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 p-4 pt-24">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">Register</CardTitle>
-          <CardDescription className="text-center">
-            Step {step} of 4: Create your account
+    <div className="min-h-screen flex items-center justify-center bg-[#151c2e] p-4 pt-24">
+      <Card className="w-full max-w-md bg-[#192345] border-[#6aa5ff]/20">
+        <CardHeader className="text-center border-b border-[#6aa5ff]/10">
+          <div className="mx-auto mb-4 w-16 h-16 bg-[#6aa5ff]/10 rounded-full flex items-center justify-center">
+            <UserPlus className="h-8 w-8 text-[#6aa5ff]" />
+          </div>
+          <CardTitle className="text-2xl text-white">Create Account</CardTitle>
+          <CardDescription className="text-white/60">
+            Step {step} of 4: Complete the registration
           </CardDescription>
           <div className="flex gap-2 mt-4">
             {[1, 2, 3, 4].map((s) => (
               <div
                 key={s}
                 className={`h-2 flex-1 rounded ${
-                  s <= step ? "bg-primary" : "bg-muted"
+                  s <= step ? "bg-[#6aa5ff]" : "bg-[#0f1729]"
                 } transition-colors`}
               />
             ))}
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <form onSubmit={handleSubmit}>
             <AnimatePresence mode="wait">
               {step === 1 && (
@@ -187,22 +191,26 @@ export default function RegisterPage() {
                   className="space-y-4"
                 >
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="name" className="text-white flex items-center gap-2">
+                      <User className="h-4 w-4 text-[#6aa5ff]" />
+                      Full Name
+                    </Label>
                     <Input
                       ref={nameInputRef}
                       id="name"
                       type="text"
                       placeholder="John Doe"
+                      className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
                       value={formData.name}
                       onChange={(e) => updateFormData("name", e.target.value)}
                       required
                       autoComplete="name"
                     />
                     {errors.name && (
-                      <p className="text-sm text-destructive">{errors.name}</p>
+                      <p className="text-sm text-red-400">{errors.name}</p>
                     )}
                   </div>
-                  <Button type="button" onClick={handleNext} className="w-full">
+                  <Button type="button" onClick={handleNext} className="w-full bg-[#6aa5ff] hover:bg-[#5a95ef] text-white font-semibold">
                     Next
                   </Button>
                 </motion.div>
@@ -217,26 +225,30 @@ export default function RegisterPage() {
                   className="space-y-4"
                 >
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email" className="text-white flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-[#6aa5ff]" />
+                      Email
+                    </Label>
                     <Input
                       ref={emailInputRef}
                       id="email"
                       type="email"
                       placeholder="you@example.com"
+                      className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
                       value={formData.email}
                       onChange={(e) => updateFormData("email", e.target.value)}
                       required
                       autoComplete="email"
                     />
                     {errors.email && (
-                      <p className="text-sm text-destructive">{errors.email}</p>
+                      <p className="text-sm text-red-400">{errors.email}</p>
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={handleBack} className="flex-1">
+                    <Button type="button" variant="outline" onClick={handleBack} className="flex-1 bg-[#0f1729] border-[#6aa5ff]/20 text-white hover:bg-[#1f2d4f]">
                       Back
                     </Button>
-                    <Button type="button" onClick={handleNext} className="flex-1">
+                    <Button type="button" onClick={handleNext} className="flex-1 bg-[#6aa5ff] hover:bg-[#5a95ef] text-white font-semibold">
                       Next
                     </Button>
                   </div>
@@ -252,41 +264,49 @@ export default function RegisterPage() {
                   className="space-y-4"
                 >
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password" className="text-white flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-[#6aa5ff]" />
+                      Password
+                    </Label>
                     <Input
                       ref={passwordInputRef}
                       id="password"
                       type="password"
                       placeholder="••••••••"
+                      className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
                       value={formData.password}
                       onChange={(e) => updateFormData("password", e.target.value)}
                       required
                       autoComplete="new-password"
                     />
                     {errors.password && (
-                      <p className="text-sm text-destructive">{errors.password}</p>
+                      <p className="text-sm text-red-400">{errors.password}</p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Label htmlFor="confirmPassword" className="text-white flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-[#6aa5ff]" />
+                      Confirm Password
+                    </Label>
                     <Input
                       id="confirmPassword"
                       type="password"
                       placeholder="••••••••"
+                      className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
                       value={formData.confirmPassword}
                       onChange={(e) => updateFormData("confirmPassword", e.target.value)}
                       required
                       autoComplete="new-password"
                     />
                     {errors.confirmPassword && (
-                      <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                      <p className="text-sm text-red-400">{errors.confirmPassword}</p>
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={handleBack} className="flex-1">
+                    <Button type="button" variant="outline" onClick={handleBack} className="flex-1 bg-[#0f1729] border-[#6aa5ff]/20 text-white hover:bg-[#1f2d4f]">
                       Back
                     </Button>
-                    <Button type="button" onClick={handleNext} className="flex-1">
+                    <Button type="button" onClick={handleNext} className="flex-1 bg-[#6aa5ff] hover:bg-[#5a95ef] text-white font-semibold">
                       Next
                     </Button>
                   </div>
@@ -302,10 +322,13 @@ export default function RegisterPage() {
                   className="space-y-4"
                 >
                   <div className="space-y-2">
-                    <Label htmlFor="teamSize">Team Size</Label>
+                    <Label htmlFor="teamSize" className="text-white flex items-center gap-2">
+                      <Users className="h-4 w-4 text-[#6aa5ff]" />
+                      Team Size
+                    </Label>
                     <select
                       id="teamSize"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      className="flex h-10 w-full rounded-md border border-[#6aa5ff]/20 bg-[#0f1729] text-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa5ff] focus-visible:ring-offset-2"
                       value={formData.teamSize}
                       onChange={(e) => updateFormData("teamSize", parseInt(e.target.value))}
                     >
@@ -317,26 +340,27 @@ export default function RegisterPage() {
                   </div>
                   {formData.teamSize > 1 && (
                     <div className="space-y-2">
-                      <Label htmlFor="teamName">Team Name</Label>
+                      <Label htmlFor="teamName" className="text-white">Team Name</Label>
                       <Input
                         ref={teamNameInputRef}
                         id="teamName"
                         type="text"
                         placeholder="Team Name"
+                        className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
                         value={formData.teamName}
                         onChange={(e) => updateFormData("teamName", e.target.value)}
                         required={formData.teamSize > 1}
                       />
                       {errors.teamName && (
-                        <p className="text-sm text-destructive">{errors.teamName}</p>
+                        <p className="text-sm text-red-400">{errors.teamName}</p>
                       )}
                     </div>
                   )}
                   <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={handleBack} className="flex-1">
+                    <Button type="button" variant="outline" onClick={handleBack} className="flex-1 bg-[#0f1729] border-[#6aa5ff]/20 text-white hover:bg-[#1f2d4f]">
                       Back
                     </Button>
-                    <Button type="submit" disabled={loading} className="flex-1">
+                    <Button type="submit" disabled={loading} className="flex-1 bg-[#6aa5ff] hover:bg-[#5a95ef] text-white font-semibold">
                       {loading ? "Registering..." : "Register"}
                     </Button>
                   </div>
@@ -344,9 +368,9 @@ export default function RegisterPage() {
               )}
             </AnimatePresence>
           </form>
-          <div className="mt-4 text-center text-sm">
-            <span className="text-muted-foreground">Already have an account? </span>
-            <Link href="/auth/signin" className="text-primary hover:underline">
+          <div className="mt-6 text-center text-sm">
+            <span className="text-white/60">Already have an account? </span>
+            <Link href="/auth/signin" className="text-[#6aa5ff] hover:text-[#5a95ef] font-semibold">
               Sign In
             </Link>
           </div>
