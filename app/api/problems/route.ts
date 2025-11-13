@@ -26,8 +26,6 @@ export async function GET(request: Request) {
     if (isActive !== null) query.isActive = isActive === "true"
 
     const problems = await Problem.find(query)
-      .populate('testCases')
-      .populate('mcqOptions')
       .sort({ createdAt: 1 })
       .lean()
 
@@ -120,12 +118,9 @@ export async function POST(request: Request) {
       await MCQOption.insertMany(optionDocs)
     }
 
-    const populatedProblem = await Problem.findById(problem._id)
-      .populate('testCases')
-      .populate('mcqOptions')
-      .lean()
+    const createdProblem = await Problem.findById(problem._id).lean()
 
-    return NextResponse.json(populatedProblem, { status: 201 })
+    return NextResponse.json(createdProblem, { status: 201 })
   } catch (error: any) {
     console.error("Error creating problem:", error)
     console.error("Error stack:", error.stack)

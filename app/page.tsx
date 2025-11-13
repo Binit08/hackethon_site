@@ -99,7 +99,7 @@
           <section id="register" className="grid md:grid-cols-2 gap-8 items-center mt-10 bg-[#192345] rounded-2xl p-8">
             <div>
               <h3 className="font-bold text-xl mb-4">Register Your Team</h3>
-              <p className="mb-2 text-white/80">Assemble your team of up to three members and get ready to code. Registration closes on <b>30th December 2025</b>. Don't miss out on this incredible opportunity.</p>
+              <p className="mb-2 text-white/80">Assemble your team of up to three members and get ready to code. Registration closes on <b>30th December 2025</b>. Don&apos;t miss out on this incredible opportunity.</p>
               <ul className="mb-4 flex gap-6 flex-wrap">
                 <li className="bg-[#222a49] px-4 py-2 rounded-xl text-white/85">Free Accommodation</li>
                 <li className="bg-[#222a49] px-4 py-2 rounded-xl text-white/85">Gala Dinner</li>

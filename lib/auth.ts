@@ -35,7 +35,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         return {
-          id: user._id.toString(),
+          id: (user as any)._id.toString(),
           email: user.email,
           name: user.name,
           role: user.role,
@@ -56,6 +56,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = (user as any).role
+        console.log('JWT callback - user role:', (user as any).role)
       }
       return token
     },
@@ -63,6 +64,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string
         session.user.role = token.role as string
+        console.log('Session callback - token role:', token.role)
       }
       return session
     },

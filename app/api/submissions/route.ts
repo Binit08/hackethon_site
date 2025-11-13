@@ -72,10 +72,7 @@ export async function POST(request: Request) {
     const user = await User.findById(session.user.id).populate('teamId').lean()
 
     // Get problem
-    const problem = await Problem.findById(problemId)
-      .populate('testCases')
-      .populate('mcqOptions')
-      .lean()
+    const problem = await Problem.findById(problemId).lean()
 
     if (!problem) {
       return NextResponse.json(
@@ -90,31 +87,19 @@ export async function POST(request: Request) {
     let error: string | null = null
     let isCorrect = false
 
-    // Handle MCQ submission
-    if (problem.type === "MCQ" && optionId) {
-      const selectedOption = (problem.mcqOptions as any[]).find(
-        (opt: any) => opt._id.toString() === optionId
-      )
-      isCorrect = selectedOption?.isCorrect || false
-      score = isCorrect ? problem.points : 0
-      status = isCorrect ? "ACCEPTED" : "WRONG_ANSWER"
-      verdict = isCorrect ? "Correct" : "Incorrect"
-
-      // Save MCQ answer
-      await MCQAnswer.findOneAndUpdate(
-        {
-          userId: session.user.id,
-          problemId: problem._id,
-        },
-        {
-          userId: session.user.id,
-          problemId: problem._id,
-          optionId,
-          isCorrect,
-          score,
-        },
-        { upsert: true, new: true }
-      )
+    // Handle MCQ submission (simple text answer check)
+    if (problem.type === "MCQ" && code) {
+      // For MCQ with text answers, we'll store as pending
+      // Admin can manually grade or auto-check against correctAnswer field
+      if (problem.correctAnswer && code.trim().toLowerCase() === problem.correctAnswer.toLowerCase()) {
+        isCorrect = true
+        score = problem.points
+        status = "ACCEPTED"
+        verdict = "Correct"
+      } else {
+        status = "PENDING"
+        verdict = "Under review"
+      }
     }
 
     // Handle coding submission (basic validation - would need actual code execution in production)
