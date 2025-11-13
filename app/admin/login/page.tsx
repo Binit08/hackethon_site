@@ -6,7 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card"
+import { ShieldCheck, Mail, Lock, AlertCircle } from "lucide-react"
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
@@ -48,41 +50,70 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#151c2e] p-4">
-      <Card className="w-full max-w-md mx-auto">
-        <CardHeader>
-          <CardTitle>Admin Login</CardTitle>
-          <CardDescription>
-            Only administrators can access the admin dashboard. Use your admin account credentials.
+      <Card className="w-full max-w-md mx-auto bg-[#192345] border-[#6aa5ff]/20">
+        <CardHeader className="text-center border-b border-[#6aa5ff]/10">
+          <div className="mx-auto mb-4 w-16 h-16 bg-[#ff6ab0]/10 rounded-full flex items-center justify-center">
+            <ShieldCheck className="h-8 w-8 text-[#ff6ab0]" />
+          </div>
+          <CardTitle className="text-2xl text-white">Admin Access</CardTitle>
+          <CardDescription className="text-white/60">
+            Only administrators can access the admin dashboard
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {(urlError === "unauthorized") && (
-            <div className="text-red-500 mb-4 text-sm">
-              You must be an admin to access that page.
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-400" />
+              <span className="text-red-400 text-sm">
+                You must be an admin to access that page.
+              </span>
             </div>
           )}
           {error && (
-            <div className="text-red-500 mb-4 text-sm">{error}</div>
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-400" />
+              <span className="text-red-400 text-sm">{error}</span>
+            </div>
           )}
           <form className="space-y-4" onSubmit={handleLogin}>
-            <Input
-              type="email"
-              placeholder="Admin email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-            />
-            <Button type="submit" className="w-full bg-[#ff6ab0] hover:bg-[#e2549b]" disabled={loading}>
-              {loading ? "Logging in..." : "Login"}
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-white flex items-center gap-2">
+                <Mail className="h-4 w-4 text-[#6aa5ff]" />
+                Admin Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="admin@example.com"
+                className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-white flex items-center gap-2">
+                <Lock className="h-4 w-4 text-[#6aa5ff]" />
+                Password
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+            </div>
+            <Button 
+              type="submit" 
+              className="w-full bg-[#ff6ab0] hover:bg-[#e2549b] text-white font-semibold" 
+              disabled={loading}
+            >
+              {loading ? "Logging in..." : "Admin Login"}
             </Button>
           </form>
         </CardContent>

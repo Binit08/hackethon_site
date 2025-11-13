@@ -3,8 +3,8 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { Providers } from "./providers"
 import { Toaster } from "@/components/ui/toaster"
-import { Navbar } from "@/components/navbar"
-import Footer from "@/components/footer"
+import { ConditionalNavbar } from "@/components/conditional-navbar"
+import { ConditionalFooter } from "@/components/conditional-footer"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -22,9 +22,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <Providers>
-          <Navbar />
+          <ConditionalNavbar />
           {children}
-          <Footer />
+          <ConditionalFooter />
           <Toaster />
         </Providers>
       </body>

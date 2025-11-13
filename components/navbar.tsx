@@ -25,28 +25,44 @@ export function Navbar() {
           {/* Middle: Nav Links */}
           <div className="hidden md:flex gap-8 text-white/80 font-medium">
             <Link 
-              href="#about"
-              className="hover:text-white/95 transition-colors"
+              href="/"
+              className={`hover:text-white/95 transition-colors ${pathname === "/" ? "text-[#6aa5ff] font-bold" : ""}`}
             >
-              About
+              Home
+            </Link>
+            {session && (
+              <>
+                <Link 
+                  href="/dashboard"
+                  className={`hover:text-white/95 transition-colors ${pathname === "/dashboard" ? "text-[#6aa5ff] font-bold" : ""}`}
+                >
+                  Dashboard
+                </Link>
+                <Link 
+                  href="/submissions"
+                  className={`hover:text-white/95 transition-colors ${pathname === "/submissions" ? "text-[#6aa5ff] font-bold" : ""}`}
+                >
+                  Submissions
+                </Link>
+                <Link 
+                  href="/leaderboard"
+                  className={`hover:text-white/95 transition-colors ${pathname === "/leaderboard" ? "text-[#6aa5ff] font-bold" : ""}`}
+                >
+                  Leaderboard
+                </Link>
+              </>
+            )}
+            <Link 
+              href="/faq"
+              className={`hover:text-white/95 transition-colors ${pathname === "/faq" ? "text-[#6aa5ff] font-bold" : ""}`}
+            >
+              FAQ
             </Link>
             <Link 
-              href="#timeline"
-              className="hover:text-white/95 transition-colors"
+              href="/contact"
+              className={`hover:text-white/95 transition-colors ${pathname === "/contact" ? "text-[#6aa5ff] font-bold" : ""}`}
             >
-              Timeline
-            </Link>
-            <Link 
-              href="#prizes"
-              className="hover:text-white/95 transition-colors"
-            >
-              Prizes
-            </Link>
-            <Link 
-              href="#register"
-              className="hover:text-white/95 transition-colors"
-            >
-              Register
+              Contact
             </Link>
             {session?.user?.role === "ADMIN" && (
               <Link
