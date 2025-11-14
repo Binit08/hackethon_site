@@ -12,9 +12,9 @@ import {
 type DashboardClientProps = {
   session: {
     user?: {
-      name?: string
-      email?: string
-      image?: string
+      name?: string | null
+      email?: string | null
+      image?: string | null
     }
     [key: string]: any
   }
