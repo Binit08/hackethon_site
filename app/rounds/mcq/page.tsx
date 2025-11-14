@@ -58,6 +58,8 @@ export default function MCQRoundPage() {
     fetchProblems()
   }, [fetchProblems])
 
+  // MCQ demo round: always open, no schedule gating
+
   const handleSubmit = async () => {
     setSubmitting(true)
     try {
@@ -104,6 +106,68 @@ export default function MCQRoundPage() {
       setSubmitting(false)
     }
   }
+
+  // Auto-submit on navigation/back or tab hide
+  useEffect(() => {
+    const hasAnswers = () => Object.keys(selectedAnswers).some((k) => (selectedAnswers[k] || '').trim())
+
+    const makeBeaconPayload = () => {
+      const items = Object.entries(selectedAnswers)
+        .filter(([_, ans]) => (ans || '').trim())
+        .map(([problemId, code]) => ({ problemId, code, language: 'text' }))
+      return JSON.stringify({ items, reason: 'AUTO_UNLOAD', round: 'MCQ' })
+    }
+
+    const autoSubmit = () => {
+      if (!hasAnswers()) return
+      try {
+        const blob = new Blob([makeBeaconPayload()], { type: 'application/json' })
+        navigator.sendBeacon('/api/submissions/auto', blob)
+      } catch (e) {
+        // best effort fallback
+        fetch('/api/submissions/auto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: makeBeaconPayload(),
+          keepalive: true,
+        }).catch(() => {})
+      }
+      if ((window as any).__stopProctoring) {
+        (window as any).__stopProctoring()
+      }
+    }
+
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasAnswers()) {
+        autoSubmit()
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+
+    const onPopState = () => {
+      if (hasAnswers()) {
+        toast({ title: 'Leaving exam', description: 'Your answers are being auto-submitted.' })
+        autoSubmit()
+      }
+    }
+
+    const onVisibility = () => {
+      if (document.hidden && hasAnswers()) {
+        toast({ title: 'Tab hidden', description: 'Auto-submitting your answers and stopping proctoring.' })
+        autoSubmit()
+      }
+    }
+
+    window.addEventListener('beforeunload', beforeUnload)
+    window.addEventListener('popstate', onPopState)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload)
+      window.removeEventListener('popstate', onPopState)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [selectedAnswers, toast])
 
   if (loading) {
     return (
@@ -204,7 +268,8 @@ export default function MCQRoundPage() {
               </p>
               <Button
                 onClick={handleSubmit}
-                disabled={submitting || Object.keys(selectedAnswers).filter(key => selectedAnswers[key].trim()).length !== problems.length}
+                disabled={submitting 
+                  || Object.keys(selectedAnswers).filter(key => selectedAnswers[key].trim()).length !== problems.length}
                 size="lg"
                 className="bg-[#6aa5ff] hover:bg-[#3c7dff] disabled:opacity-50"
               >

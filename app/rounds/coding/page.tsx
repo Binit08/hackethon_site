@@ -38,6 +38,8 @@ interface Problem {
 
 export default function CodingRoundPage() {
   const { data: session } = useSession()
+  const [statusLoading, setStatusLoading] = useState(true)
+  const [roundStatus, setRoundStatus] = useState<any | null>(null)
   const [problems, setProblems] = useState<Problem[]>([])
   const [selectedProblem, setSelectedProblem] = useState<Problem | null>(null)
   const [code, setCode] = useState("")
@@ -90,6 +92,27 @@ export default function CodingRoundPage() {
   useEffect(() => {
     fetchProblems()
   }, [fetchProblems])
+
+  // Fetch round status to gate Round 2 access
+  useEffect(() => {
+    const loadStatus = async () => {
+      try {
+        const res = await fetch('/api/rounds/status')
+        if (res.ok) {
+          const data = await res.json()
+          setRoundStatus(data)
+        }
+      } catch (e) {
+        // ignore
+      } finally {
+        setStatusLoading(false)
+      }
+    }
+    loadStatus()
+  }, [])
+
+  // Dev/admin override to allow coding submissions off-schedule and bypass qualification
+  const allowOffschedule = (process.env.NEXT_PUBLIC_ALLOW_OFFSCHEDULE_SUBMISSIONS === 'true') || (session?.user?.role === 'ADMIN')
 
   useEffect(() => {
     if (selectedProblem) {
@@ -197,6 +220,67 @@ export default function CodingRoundPage() {
     }
   }
 
+  // Auto-submit on navigation/back or tab hide for coding
+  useEffect(() => {
+    const hasWork = () => !!(selectedProblem && code.trim())
+
+    const makeBeaconPayload = () => {
+      const items = selectedProblem && code.trim()
+        ? [{ problemId: (selectedProblem as any).id, code, language }]
+        : []
+      return JSON.stringify({ items, reason: 'AUTO_UNLOAD', round: 'CODING' })
+    }
+
+    const autoSubmit = () => {
+      if (!hasWork()) return
+      try {
+        const blob = new Blob([makeBeaconPayload()], { type: 'application/json' })
+        navigator.sendBeacon('/api/submissions/auto', blob)
+      } catch (e) {
+        fetch('/api/submissions/auto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: makeBeaconPayload(),
+          keepalive: true,
+        }).catch(() => {})
+      }
+      if ((window as any).__stopProctoring) {
+        (window as any).__stopProctoring()
+      }
+    }
+
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasWork()) {
+        autoSubmit()
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+
+    const onPopState = () => {
+      if (hasWork()) {
+        toast({ title: 'Leaving coding round', description: 'Your code is being auto-submitted.' })
+        autoSubmit()
+      }
+    }
+
+    const onVisibility = () => {
+      if (document.hidden && hasWork()) {
+        toast({ title: 'Tab hidden', description: 'Auto-submitting your code and stopping proctoring.' })
+        autoSubmit()
+      }
+    }
+
+    window.addEventListener('beforeunload', beforeUnload)
+    window.addEventListener('popstate', onPopState)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload)
+      window.removeEventListener('popstate', onPopState)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [selectedProblem, code, language, toast])
+
   const handleRun = async () => {
     if (!selectedProblem || !code.trim()) {
       toast({
@@ -264,6 +348,8 @@ export default function CodingRoundPage() {
 
   return (
     <div className="min-h-screen bg-[#151c2e] text-white relative overflow-hidden">
+      {/* Round access gating banners */}
+      {/* Banners removed per request; gating logic retained without visual notices */}
       
       {/* Background & Glass Effect - matching homepage */}
       <div className="pointer-events-none absolute inset-0">
@@ -272,7 +358,7 @@ export default function CodingRoundPage() {
       </div>
       <div className="absolute inset-0 bg-white/0 backdrop-blur-[2px]" />
 
-      {/* Top bar */}
+  {/* Top bar */}
       <div className="z-10 w-full border-b border-[#6aa5ff]/20 bg-[#192345]/80 backdrop-blur supports-[backdrop-filter]:bg-[#192345]/60 sticky top-0">
         <div className="container mx-auto px-4 py-3 flex flex-wrap gap-3 items-center justify-between">
           <div className="flex items-center gap-3">
@@ -307,6 +393,7 @@ export default function CodingRoundPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Disable action buttons if locked */}
             <Select value={language} onValueChange={setLanguage}>
               <SelectTrigger className="w-36 bg-[#232b4d] border-[#6aa5ff]/20 text-white">
                 <SelectValue />
@@ -330,7 +417,7 @@ export default function CodingRoundPage() {
 
             <Button 
               onClick={handleRun} 
-              disabled={running || !selectedProblem} 
+              disabled={running || !selectedProblem || (!allowOffschedule && (roundStatus && roundStatus.round2.window === 'active' && !roundStatus.round1.qualified))} 
               variant="outline"
               className="bg-green-500/20 border-green-500/30 hover:bg-green-500/30 text-green-400"
             >
@@ -356,7 +443,7 @@ export default function CodingRoundPage() {
             </Button>
             <Button 
               onClick={handleSubmit} 
-              disabled={submitting || !selectedProblem}
+              disabled={submitting || !selectedProblem || (!allowOffschedule && (roundStatus && roundStatus.round2.window === 'active' && !roundStatus.round1.qualified))}
               className="bg-[#6aa5ff] hover:bg-[#3c7dff]"
             >
               {submitting ? (

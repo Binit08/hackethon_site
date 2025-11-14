@@ -467,32 +467,32 @@ export default function AdminPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {problems.map((problem) => (
+                      {problems.filter(Boolean).map((problem: any) => (
                         <div
-                          key={problem.id}
+                          key={problem.id || problem._id}
                           className="flex items-center justify-between p-6 border border-[#6aa5ff]/20 rounded-xl bg-[#232b4d] hover:border-[#6aa5ff]/40 transition-all"
                         >
                           <div className="flex-1">
-                            <h3 className="font-bold text-xl mb-2">{problem.title}</h3>
+                            <h3 className="font-bold text-xl mb-2">{problem?.title || 'Untitled Problem'}</h3>
                             <div className="flex gap-3 mb-3 flex-wrap">
                               <span className="px-3 py-1 rounded-full bg-[#6aa5ff]/20 text-[#6aa5ff] text-sm font-medium">
-                                {problem.type}
+                                {problem?.type || 'UNKNOWN'}
                               </span>
                               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                problem.difficulty === 'EASY' ? 'bg-green-500/20 text-green-400' :
-                                problem.difficulty === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-400' :
+                                problem?.difficulty === 'EASY' ? 'bg-green-500/20 text-green-400' :
+                                problem?.difficulty === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-400' :
                                 'bg-red-500/20 text-red-400'
                               }`}>
-                                {problem.difficulty}
+                                {problem?.difficulty || 'N/A'}
                               </span>
                               <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 text-sm font-medium">
-                                {problem.points} pts
+                                {problem?.points ?? 0} pts
                               </span>
                               <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-sm font-medium">
-                                Round {problem.round}
+                                Round {problem?.round ?? '?'}
                               </span>
                             </div>
-                            <p className="text-white/80 text-sm line-clamp-2">{problem.description}</p>
+                            <p className="text-white/80 text-sm line-clamp-2">{problem?.description || 'No description provided.'}</p>
                           </div>
 
                           <div className="flex gap-2 ml-4">
@@ -511,7 +511,7 @@ export default function AdminPage() {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDelete(problem.id)}
+                              onClick={() => handleDelete(problem.id || problem._id)}
                               className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 !text-red-400 hover:!text-red-300"
                             >
                               <Trash2 className="h-4 w-4" />

@@ -40,9 +40,27 @@ export default function SubmissionsPage() {
         throw new Error("Server returned non-JSON response")
       }
       const data = await response.json()
-      setSubmissions(data)
+      // API returns submissions with problemId populated, not 'problem'
+      const normalized = Array.isArray(data)
+        ? data.filter(Boolean).map((s: any) => ({
+            id: s._id || s.id,
+            problem: {
+              title: s.problemId?.title || 'Unknown Problem',
+              points: s.problemId?.points || 0,
+            },
+            status: s.status || 'PENDING',
+            score: typeof s.score === 'number' ? s.score : 0,
+            runtime: s.runtime ?? null,
+            memory: s.memory ?? null,
+            submittedAt: s.submittedAt || new Date().toISOString(),
+            verdict: s.verdict || null,
+            error: s.error || null,
+          }))
+        : []
+      setSubmissions(normalized)
     } catch (error: any) {
       console.error("Error fetching submissions:", error)
+      setSubmissions([])
     } finally {
       setLoading(false)
     }
@@ -206,7 +224,7 @@ export default function SubmissionsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#6aa5ff]/10">
-                    {submissions.map((submission) => (
+                    {submissions.filter(Boolean).map((submission) => (
                       <tr 
                         key={submission.id} 
                         className="hover:bg-[#1f2d4f]/30 transition-colors"

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle, Camera, Eye, EyeOff, Users, Wifi, WifiOff } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -294,14 +294,26 @@ export function Proctoring({
     }
   }
 
-  const cleanup = () => {
+  const cleanup = useCallback(() => {
     if (stream) {
       stream.getTracks().forEach(track => track.stop())
     }
     if (detectionIntervalRef.current) {
       clearInterval(detectionIntervalRef.current)
     }
-  }
+  }, [stream])
+
+  // Expose a global stop hook so pages can force proctoring off before auto-submit
+  useEffect(() => {
+    ;(window as any).__stopProctoring = () => {
+      cleanup()
+      setIsMonitoring(false)
+      setCurrentStatus('Monitoring stopped')
+    }
+    return () => {
+      delete (window as any).__stopProctoring
+    }
+  }, [cleanup])
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
