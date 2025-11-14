@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Hash password
+  // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 
     // Create user first
@@ -50,8 +50,19 @@ export async function POST(request: Request) {
 
     // Create team if needed
     if (teamName) {
+      // Validate team name format (same as schema)
+      const normalized = String(teamName).replace(/\s+/g, ' ').trim()
+      const re = /^[A-Za-z][A-Za-z0-9\- ]{1,28}[A-Za-z0-9]$/
+      if (normalized.length < 3 || normalized.length > 30 || !re.test(normalized)) {
+        // Delete the user if created earlier (but at this point user not yet created?)
+        // We validate before creating team and after creating user, so no cleanup needed yet.
+        return NextResponse.json(
+          { error: "Team name must be 3-30 chars, start with a letter, and contain only letters, numbers, spaces, or hyphens" },
+          { status: 400 }
+        )
+      }
       // Check if team name is taken
-      const existingTeam = await Team.findOne({ name: teamName })
+      const existingTeam = await Team.findOne({ name: normalized })
 
       if (existingTeam) {
         // Delete the user if team creation fails
@@ -64,7 +75,7 @@ export async function POST(request: Request) {
 
       // Create team with leader
       const team = await Team.create({
-        name: teamName,
+        name: normalized,
         leaderId: user._id,
       }) as typeof Team.prototype
 

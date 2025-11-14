@@ -14,6 +14,20 @@ const TeamSchema = new Schema<ITeam>(
       required: true,
       unique: true,
       trim: true,
+      minlength: [3, 'Team name must be at least 3 characters'],
+      maxlength: [30, 'Team name must be at most 30 characters'],
+      validate: {
+        validator: function (v: string) {
+          if (!v) return false
+          // Collapse multiple spaces for validation purposes
+          const normalized = v.replace(/\s+/g, ' ').trim()
+          // Start with a letter, allow letters, numbers, spaces and hyphens, end with letter/number
+          const re = /^[A-Za-z][A-Za-z0-9\- ]{1,28}[A-Za-z0-9]$/
+          return re.test(normalized)
+        },
+        message:
+          'Team name must be 3-30 chars, start with a letter, and contain only letters, numbers, spaces, or hyphens',
+      },
     },
     leaderId: {
       type: Schema.Types.ObjectId,
@@ -27,6 +41,15 @@ const TeamSchema = new Schema<ITeam>(
     collection: 'teams',
   }
 )
+
+// Normalize spacing before save (trim and collapse multiple spaces)
+TeamSchema.pre('save', function (next) {
+  if (this.isModified('name')) {
+    // @ts-ignore
+    this.name = this.name.replace(/\s+/g, ' ').trim()
+  }
+  next()
+})
 
 TeamSchema.index({ leaderId: 1 })
 

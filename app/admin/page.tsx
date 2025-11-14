@@ -2,19 +2,17 @@
 
 import React, { useEffect, useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, Plus, Trash2, Edit, Camera } from "lucide-react"
+import { 
+  Loader2, Plus, Trash2, Edit, Camera, Users, FileText, 
+  TrendingUp, Award, Activity, CheckCircle, XCircle, Clock,
+  BarChart3, Target, Shield
+} from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -42,12 +40,36 @@ interface Problem {
   round: number
 }
 
+interface DashboardStats {
+  totalUsers: number
+  totalTeams: number
+  totalProblems: number
+  totalSubmissions: number
+  acceptedSubmissions: number
+  activeUsers: number
+  averageScore: number
+  invalidTeamNames?: number
+  newTeams24h?: number
+}
+
 export default function AdminPage() {
   const router = useRouter()
   const [problems, setProblems] = useState<Problem[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingProblem, setEditingProblem] = useState<Problem | null>(null)
+  const [stats, setStats] = useState<DashboardStats>({
+    totalUsers: 0,
+    totalTeams: 0,
+    totalProblems: 0,
+    totalSubmissions: 0,
+    acceptedSubmissions: 0,
+    activeUsers: 0,
+    averageScore: 0,
+    invalidTeamNames: 0,
+    newTeams24h: 0,
+  })
+  const [recentSubmissions, setRecentSubmissions] = useState<any[]>([])
   const mountedRef = useRef(true)
   const { toast } = useToast()
 
@@ -85,15 +107,57 @@ export default function AdminPage() {
     }
   }, [toast])
 
+  const fetchDashboardStats = useCallback(async () => {
+    try {
+      const [subsRes, adminStatsRes] = await Promise.all([
+        fetch('/api/submissions'),
+        fetch('/api/admin/stats')
+      ])
+      const submissions = subsRes.ok ? await subsRes.json() : []
+      const adminStats = adminStatsRes.ok ? await adminStatsRes.json() : {}
+
+      const accepted = submissions.filter((s: any) => s.status === 'ACCEPTED').length
+      const totalScore = submissions.reduce((sum: number, s: any) => sum + (s.score || 0), 0)
+
+      setStats({
+        totalUsers: Number(adminStats.totalUsers || 0),
+        totalTeams: Number(adminStats.totalTeams || 0),
+        totalProblems: problems.length,
+        totalSubmissions: submissions.length,
+        acceptedSubmissions: accepted,
+        activeUsers: 0,
+        averageScore: submissions.length > 0 ? Math.round(totalScore / submissions.length) : 0,
+        invalidTeamNames: Number(adminStats.invalidTeamNames || 0),
+        newTeams24h: Number(adminStats.newTeams24h || 0),
+      })
+    } catch (err) {
+      console.error('Failed to fetch stats:', err)
+    }
+  }, [problems.length])
+
+  const fetchRecentSubmissions = useCallback(async () => {
+    try {
+      const res = await fetch('/api/submissions')
+      if (res.ok) {
+        const data = await res.json()
+        setRecentSubmissions(Array.isArray(data) ? data.slice(0, 5) : [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch recent submissions:', err)
+    }
+  }, [])
+
   useEffect(() => {
     mountedRef.current = true
     const ac = new AbortController()
     fetchProblems(ac.signal)
+    fetchDashboardStats()
+    fetchRecentSubmissions()
     return () => {
       mountedRef.current = false
       ac.abort()
     }
-  }, [fetchProblems])
+  }, [fetchProblems, fetchDashboardStats, fetchRecentSubmissions])
 
   // Optimistic delete: remove from UI immediately, rollback if server fails
   const handleDelete = async (id: string) => {
@@ -150,9 +214,16 @@ export default function AdminPage() {
 
                 <div className="flex gap-3">
                   <Button
+                    onClick={() => router.push("/")}
+                    variant="outline"
+                    className="bg-[#6aa5ff] border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/10 !text-white hover:!text-white"
+                  >
+                    ← Back to Home
+                  </Button>
+                  <Button
                     onClick={() => router.push("/admin/proctoring")}
                     variant="outline"
-                    className="border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/10 text-white"
+                    className="bg-[#6aa5ff] border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/10 !text-white hover:!text-white"
                   >
                     <Camera className="mr-2 h-4 w-4" />
                     Proctoring
@@ -164,7 +235,7 @@ export default function AdminPage() {
                           setEditingProblem(null)
                           setIsDialogOpen(true)
                         }}
-                        className="flex items-center gap-2 bg-[#6aa5ff] hover:bg-[#3c7dff]"
+                        className="flex items-center gap-2 bg-[#6aa5ff] hover:bg-[#3c7dff] text-white"
                       >
                         <Plus className="h-4 w-4" />
                         Add Problem
@@ -202,7 +273,7 @@ export default function AdminPage() {
                       setLoading(true)
                       fetchProblems()
                     }}
-                    className="border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/10"
+                    className="bg-[#6aa5ff] border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/10 !text-white hover:!text-white"
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
                   </Button>
@@ -213,12 +284,166 @@ export default function AdminPage() {
         </header>
 
         <main className="relative z-10 container mx-auto px-4 max-w-6xl pb-12">
+          {/* Dashboard Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <Card className="bg-[#192345] border-[#6aa5ff]/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-white/60 mb-1">Total Problems</p>
+                    <p className="text-3xl font-bold text-white">{stats.totalProblems}</p>
+                  </div>
+                  <FileText className="h-10 w-10 text-[#6aa5ff]/40" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#192345] border-[#6aa5ff]/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-white/60 mb-1">Submissions</p>
+                    <p className="text-3xl font-bold text-white">{stats.totalSubmissions}</p>
+                  </div>
+                  <Activity className="h-10 w-10 text-[#6aa5ff]/40" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#192345] border-[#6aa5ff]/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-white/60 mb-1">Accepted</p>
+                    <p className="text-3xl font-bold text-green-400">{stats.acceptedSubmissions}</p>
+                  </div>
+                  <CheckCircle className="h-10 w-10 text-green-400/40" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#192345] border-[#6aa5ff]/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-white/60 mb-1">Avg Score</p>
+                    <p className="text-3xl font-bold text-yellow-400">{stats.averageScore}</p>
+                  </div>
+                  <Award className="h-10 w-10 text-yellow-400/40" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Teams */}
+            <Card className="bg-[#192345] border-[#6aa5ff]/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-white/60 mb-1">Teams</p>
+                    <p className="text-3xl font-bold text-white">{stats.totalTeams}</p>
+                    <p className="text-xs text-white/50 mt-1">New 24h: {stats.newTeams24h} • Invalid names: {stats.invalidTeamNames}</p>
+                  </div>
+                  <Users className="h-10 w-10 text-[#6aa5ff]/40" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <Tabs defaultValue="problems" className="space-y-6">
             <TabsList className="bg-[#192345] border border-[#6aa5ff]/20">
+              <TabsTrigger value="overview" className="data-[state=active]:bg-[#6aa5ff] data-[state=active]:text-white">Overview</TabsTrigger>
               <TabsTrigger value="problems" className="data-[state=active]:bg-[#6aa5ff] data-[state=active]:text-white">Problems</TabsTrigger>
               <TabsTrigger value="submissions" className="data-[state=active]:bg-[#6aa5ff] data-[state=active]:text-white">Submissions</TabsTrigger>
               <TabsTrigger value="results" className="data-[state=active]:bg-[#6aa5ff] data-[state=active]:text-white">Results</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="overview">
+              <div className="grid gap-6">
+                {/* Recent Activity */}
+                <Card className="bg-[#192345] border-[#6aa5ff]/20">
+                  <CardHeader>
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-[#6aa5ff]" />
+                      Recent Submissions
+                    </CardTitle>
+                    <CardDescription className="text-white/60">Latest 5 submissions from participants</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {recentSubmissions.length === 0 ? (
+                      <p className="text-white/60 text-center py-8">No submissions yet</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {recentSubmissions.map((sub: any) => (
+                          <div key={sub.id} className="flex items-center justify-between p-4 bg-[#0f1729] rounded-lg border border-[#6aa5ff]/10">
+                            <div className="flex items-center gap-3">
+                              {sub.status === 'ACCEPTED' ? (
+                                <CheckCircle className="h-5 w-5 text-green-400" />
+                              ) : sub.status === 'WRONG_ANSWER' ? (
+                                <XCircle className="h-5 w-5 text-red-400" />
+                              ) : (
+                                <Clock className="h-5 w-5 text-yellow-400" />
+                              )}
+                              <div>
+                                <p className="text-white font-medium">{sub.problem?.title || 'Problem'}</p>
+                                <p className="text-white/50 text-sm">{new Date(sub.submittedAt).toLocaleString()}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-white font-semibold">{sub.score} pts</p>
+                              <p className={`text-sm ${
+                                sub.status === 'ACCEPTED' ? 'text-green-400' :
+                                sub.status === 'WRONG_ANSWER' ? 'text-red-400' :
+                                'text-yellow-400'
+                              }`}>
+                                {sub.status.replace(/_/g, ' ')}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Quick Actions */}
+                <Card className="bg-[#192345] border-[#6aa5ff]/20">
+                  <CardHeader>
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <Target className="h-5 w-5 text-[#6aa5ff]" />
+                      Quick Actions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Button 
+                        onClick={() => router.push('/admin/proctoring')}
+                        className="h-24 bg-[#0f1729] border border-[#6aa5ff]/20 hover:bg-[#6aa5ff]/10 hover:border-[#6aa5ff] flex flex-col items-center justify-center gap-2 !text-white"
+                      >
+                        <Shield className="h-8 w-8 text-[#6aa5ff]" />
+                        <span>View Proctoring</span>
+                      </Button>
+                      <Button 
+                        onClick={() => router.push('/leaderboard')}
+                        className="h-24 bg-[#0f1729] border border-[#6aa5ff]/20 hover:bg-[#6aa5ff]/10 hover:border-[#6aa5ff] flex flex-col items-center justify-center gap-2 !text-white"
+                      >
+                        <BarChart3 className="h-8 w-8 text-[#6aa5ff]" />
+                        <span>Leaderboard</span>
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          setEditingProblem(null)
+                          setIsDialogOpen(true)
+                        }}
+                        className="h-24 bg-[#0f1729] border border-[#6aa5ff]/20 hover:bg-[#6aa5ff]/10 hover:border-[#6aa5ff] flex flex-col items-center justify-center gap-2 !text-white"
+                      >
+                        <Plus className="h-8 w-8 text-[#6aa5ff]" />
+                        <span>Add Problem</span>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
 
             <TabsContent value="problems">
               <Card className="bg-[#192345] border-[#6aa5ff]/20">
@@ -238,7 +463,7 @@ export default function AdminPage() {
                     </div>
                   ) : problems.length === 0 ? (
                     <div className="p-8 text-center text-white/70 bg-[#232b4d] rounded-xl">
-                      No problems found. Click "Add Problem" to create your first problem.
+                      No problems found. Click &quot;Add Problem&quot; to create your first problem.
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -278,7 +503,7 @@ export default function AdminPage() {
                                 setEditingProblem(problem)
                                 setIsDialogOpen(true)
                               }}
-                              className="border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/20 hover:border-[#6aa5ff]"
+                              className="border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/20 hover:border-[#6aa5ff] !text-white hover:!text-white"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -287,7 +512,7 @@ export default function AdminPage() {
                               variant="destructive"
                               size="sm"
                               onClick={() => handleDelete(problem.id)}
-                              className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/30"
+                              className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 !text-red-400 hover:!text-red-300"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
