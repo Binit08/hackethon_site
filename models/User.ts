@@ -48,7 +48,7 @@ const UserSchema = new Schema<IUser>(
   }
 )
 
-UserSchema.index({ email: 1 })
+// Index for teamId lookups (email is already indexed via unique: true)
 UserSchema.index({ teamId: 1 })
 
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema)

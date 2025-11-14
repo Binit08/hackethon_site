@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, Play, Send, TimerReset, Maximize2, Minimize2 } from "lucide-react"
+import { Loader2, Play, Send, TimerReset, Maximize2, Minimize2, Terminal } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Proctoring } from "@/components/proctoring"
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
@@ -16,7 +18,8 @@ const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
 })
 
 interface Problem {
-  id: string
+  _id: string
+  id?: string
   title: string
   description: string
   points: number
@@ -34,6 +37,9 @@ interface Problem {
 }
 
 export default function CodingRoundPage() {
+  const { data: session } = useSession()
+  const [statusLoading, setStatusLoading] = useState(true)
+  const [roundStatus, setRoundStatus] = useState<any | null>(null)
   const [problems, setProblems] = useState<Problem[]>([])
   const [selectedProblem, setSelectedProblem] = useState<Problem | null>(null)
   const [code, setCode] = useState("")
@@ -46,6 +52,7 @@ export default function CodingRoundPage() {
   const [leftWidth, setLeftWidth] = useState<number>(50) // %
   const [isResizing, setIsResizing] = useState(false)
   const [editorFullscreen, setEditorFullscreen] = useState(false)
+  const [proctoringSessionId] = useState(`coding-${session?.user?.id || 'guest'}-${Date.now()}`)
   const router = useRouter()
   const { toast } = useToast()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -62,9 +69,14 @@ export default function CodingRoundPage() {
         throw new Error("Server returned non-JSON response")
       }
       const data = await response.json()
-      setProblems(data)
-      if (data.length > 0) {
-        setSelectedProblem(data[0])
+      // Ensure each problem has an 'id' property for compatibility
+      const problemsWithId = data.map((p: any) => ({
+        ...p,
+        id: p._id || p.id,
+      }))
+      setProblems(problemsWithId)
+      if (problemsWithId.length > 0) {
+        setSelectedProblem(problemsWithId[0])
       }
     } catch (error: any) {
       toast({
@@ -80,6 +92,27 @@ export default function CodingRoundPage() {
   useEffect(() => {
     fetchProblems()
   }, [fetchProblems])
+
+  // Fetch round status to gate Round 2 access
+  useEffect(() => {
+    const loadStatus = async () => {
+      try {
+        const res = await fetch('/api/rounds/status')
+        if (res.ok) {
+          const data = await res.json()
+          setRoundStatus(data)
+        }
+      } catch (e) {
+        // ignore
+      } finally {
+        setStatusLoading(false)
+      }
+    }
+    loadStatus()
+  }, [])
+
+  // Dev/admin override to allow coding submissions off-schedule and bypass qualification
+  const allowOffschedule = (process.env.NEXT_PUBLIC_ALLOW_OFFSCHEDULE_SUBMISSIONS === 'true') || (session?.user?.role === 'ADMIN')
 
   useEffect(() => {
     if (selectedProblem) {
@@ -187,6 +220,67 @@ export default function CodingRoundPage() {
     }
   }
 
+  // Auto-submit on navigation/back or tab hide for coding
+  useEffect(() => {
+    const hasWork = () => !!(selectedProblem && code.trim())
+
+    const makeBeaconPayload = () => {
+      const items = selectedProblem && code.trim()
+        ? [{ problemId: (selectedProblem as any).id, code, language }]
+        : []
+      return JSON.stringify({ items, reason: 'AUTO_UNLOAD', round: 'CODING' })
+    }
+
+    const autoSubmit = () => {
+      if (!hasWork()) return
+      try {
+        const blob = new Blob([makeBeaconPayload()], { type: 'application/json' })
+        navigator.sendBeacon('/api/submissions/auto', blob)
+      } catch (e) {
+        fetch('/api/submissions/auto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: makeBeaconPayload(),
+          keepalive: true,
+        }).catch(() => {})
+      }
+      if ((window as any).__stopProctoring) {
+        (window as any).__stopProctoring()
+      }
+    }
+
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasWork()) {
+        autoSubmit()
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+
+    const onPopState = () => {
+      if (hasWork()) {
+        toast({ title: 'Leaving coding round', description: 'Your code is being auto-submitted.' })
+        autoSubmit()
+      }
+    }
+
+    const onVisibility = () => {
+      if (document.hidden && hasWork()) {
+        toast({ title: 'Tab hidden', description: 'Auto-submitting your code and stopping proctoring.' })
+        autoSubmit()
+      }
+    }
+
+    window.addEventListener('beforeunload', beforeUnload)
+    window.addEventListener('popstate', onPopState)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload)
+      window.removeEventListener('popstate', onPopState)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [selectedProblem, code, language, toast])
+
   const handleRun = async () => {
     if (!selectedProblem || !code.trim()) {
       toast({
@@ -246,16 +340,26 @@ export default function CodingRoundPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="min-h-screen bg-[#151c2e] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#6aa5ff]" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top bar */}
-      <div className="w-full border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/60 sticky top-16 z-40">
+    <div className="min-h-screen bg-[#151c2e] text-white relative overflow-hidden">
+      {/* Round access gating banners */}
+      {/* Banners removed per request; gating logic retained without visual notices */}
+      
+      {/* Background & Glass Effect - matching homepage */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(87,97,255,0.15),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(255,75,149,0.12),transparent_55%)]" />
+      </div>
+      <div className="absolute inset-0 bg-white/0 backdrop-blur-[2px]" />
+
+  {/* Top bar */}
+      <div className="z-10 w-full border-b border-[#6aa5ff]/20 bg-[#192345]/80 backdrop-blur supports-[backdrop-filter]:bg-[#192345]/60 sticky top-0">
         <div className="container mx-auto px-4 py-3 flex flex-wrap gap-3 items-center justify-between">
           <div className="flex items-center gap-3">
             <Select
@@ -267,12 +371,12 @@ export default function CodingRoundPage() {
                 setConsoleOutput("")
               }}
             >
-              <SelectTrigger className="w-60">
+              <SelectTrigger className="w-60 bg-[#232b4d] border-[#6aa5ff]/20 text-white">
                 <SelectValue placeholder="Select problem" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#232b4d] border-[#6aa5ff]/20">
                 {problems.map((problem) => (
-                  <SelectItem key={problem.id} value={problem.id}>
+                  <SelectItem key={problem.id || problem._id} value={problem.id || problem._id} className="text-white">
                     {problem.title} ({problem.points} pts)
                   </SelectItem>
                 ))}
@@ -281,35 +385,42 @@ export default function CodingRoundPage() {
 
             {selectedProblem && (
               <div className="hidden md:flex items-center gap-2 text-xs">
-                <span className="px-2 py-1 rounded bg-muted text-foreground/80">Points: {selectedProblem.points}</span>
-                <span className="px-2 py-1 rounded bg-muted text-foreground/80">Time: {selectedProblem.timeLimit} min</span>
-                <span className="px-2 py-1 rounded bg-muted text-foreground/80">Memory: {selectedProblem.memoryLimit} MB</span>
+                <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 font-medium">{selectedProblem.points} pts</span>
+                <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 font-medium">{selectedProblem.timeLimit}m</span>
+                <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 font-medium">{selectedProblem.memoryLimit}MB</span>
               </div>
             )}
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Disable action buttons if locked */}
             <Select value={language} onValueChange={setLanguage}>
-              <SelectTrigger className="w-36">
+              <SelectTrigger className="w-36 bg-[#232b4d] border-[#6aa5ff]/20 text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="javascript">JavaScript</SelectItem>
-                <SelectItem value="python">Python</SelectItem>
-                <SelectItem value="java">Java</SelectItem>
-                <SelectItem value="cpp">C++</SelectItem>
+              <SelectContent className="bg-[#232b4d] border-[#6aa5ff]/20">
+                <SelectItem value="javascript" className="text-white">JavaScript</SelectItem>
+                <SelectItem value="python" className="text-white">Python</SelectItem>
+                <SelectItem value="java" className="text-white">Java</SelectItem>
+                <SelectItem value="cpp" className="text-white">C++</SelectItem>
               </SelectContent>
             </Select>
 
             <Button
-              variant="secondary"
+              variant="outline"
               onClick={() => setEditorFullscreen((v) => !v)}
               title={editorFullscreen ? "Exit fullscreen" : "Fullscreen editor"}
+              className="bg-[#232b4d] border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/20 text-white"
             >
               {editorFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
 
-            <Button onClick={handleRun} disabled={running || !selectedProblem} variant="outline">
+            <Button 
+              onClick={handleRun} 
+              disabled={running || !selectedProblem || (!allowOffschedule && (roundStatus && roundStatus.round2.window === 'active' && !roundStatus.round1.qualified))} 
+              variant="outline"
+              className="bg-green-500/20 border-green-500/30 hover:bg-green-500/30 text-green-400"
+            >
               {running ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -326,10 +437,15 @@ export default function CodingRoundPage() {
               disabled={!consoleOutput}
               onClick={() => setConsoleOutput("")}
               title="Clear console"
+              className="bg-[#232b4d] border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/20 text-white"
             >
               <TimerReset className="mr-2 h-4 w-4" /> Reset
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting || !selectedProblem}>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={submitting || !selectedProblem || (!allowOffschedule && (roundStatus && roundStatus.round2.window === 'active' && !roundStatus.round1.qualified))}
+              className="bg-[#6aa5ff] hover:bg-[#3c7dff]"
+            >
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -346,122 +462,143 @@ export default function CodingRoundPage() {
       </div>
 
       {/* Main split panes */}
-      <div ref={containerRef} className={`container mx-auto px-4 pt-6 pb-8 ${editorFullscreen ? "max-w-full" : "max-w-7xl"}`}>
-        <div className={`${editorFullscreen ? "fixed inset-x-0 top-28 bottom-0 px-4 z-30" : ""}`}>
-          <div className="h-full" style={{ height: editorFullscreen ? "calc(100vh - 8rem)" : "calc(100vh - 12rem)" }}>
-            <div className="relative flex h-full w-full">
+      <div ref={containerRef} className={`relative z-10 container mx-auto px-4 pt-6 pb-8 ${editorFullscreen ? "max-w-full" : ""}`}>
+        <div className={`${editorFullscreen ? "fixed inset-x-0 top-16 bottom-0 px-4 z-30" : ""}`}>
+          <div className="h-full" style={{ height: editorFullscreen ? "calc(100vh - 5rem)" : "calc(100vh - 12rem)" }}>
+            <div className="relative grid grid-cols-1 lg:grid-cols-5 gap-4 h-full">
               {/* Left: Problem panel */}
-              <div className="pr-3" style={{ width: `${leftWidth}%` }}>
-                <Card className="h-full">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">{selectedProblem ? selectedProblem.title : "Problem"}</CardTitle>
-                    <CardDescription>Select a problem to view details</CardDescription>
+              <div className={editorFullscreen ? "hidden" : "lg:col-span-2"}>
+                <Card className="h-full bg-[#192345] border-[#6aa5ff]/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-white text-xl">{selectedProblem ? selectedProblem.title : "Problem"}</CardTitle>
+                    <CardDescription className="text-white/70">
+                      {selectedProblem ? `${selectedProblem.points} points • ${selectedProblem.timeLimit} min limit` : "Select a problem to view details"}
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="h-[calc(100%-4.5rem)] overflow-auto">
+                  <CardContent className="h-[calc(100%-5rem)] overflow-auto">
                     {selectedProblem ? (
                       <Tabs defaultValue="description" className="h-full flex flex-col">
-                        <TabsList className="w-full">
-                          <TabsTrigger value="description" className="flex-1">Description</TabsTrigger>
-                          <TabsTrigger value="samples" className="flex-1">Samples</TabsTrigger>
-                          <TabsTrigger value="constraints" className="flex-1">Constraints</TabsTrigger>
+                        <TabsList className="w-full bg-[#232b4d] border border-[#6aa5ff]/20">
+                          <TabsTrigger value="description" className="flex-1 data-[state=active]:bg-[#6aa5ff] data-[state=active]:text-white text-white/70">Description</TabsTrigger>
+                          <TabsTrigger value="samples" className="flex-1 data-[state=active]:bg-[#6aa5ff] data-[state=active]:text-white text-white/70">Examples</TabsTrigger>
+                          <TabsTrigger value="constraints" className="flex-1 data-[state=active]:bg-[#6aa5ff] data-[state=active]:text-white text-white/70">Constraints</TabsTrigger>
                         </TabsList>
-                        <TabsContent value="description" className="flex-1 overflow-auto mt-3">
-                          <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                        <TabsContent value="description" className="flex-1 overflow-auto mt-4">
+                          <div className="prose prose-sm prose-invert max-w-none whitespace-pre-wrap text-white/90">
                             {selectedProblem.description}
                           </div>
                         </TabsContent>
-                        <TabsContent value="samples" className="flex-1 overflow-auto mt-3 space-y-4">
+                        <TabsContent value="samples" className="flex-1 overflow-auto mt-4 space-y-4">
                           {selectedProblem.sampleInput && (
                             <div>
-                              <h4 className="font-semibold mb-2">Sample Input</h4>
-                              <pre className="bg-muted p-3 rounded-md text-sm overflow-x-auto">{selectedProblem.sampleInput}</pre>
+                              <h4 className="font-semibold mb-2 text-[#6aa5ff]">Sample Input</h4>
+                              <pre className="bg-[#232b4d] border border-[#6aa5ff]/20 p-4 rounded-lg text-sm overflow-x-auto text-white/90">{selectedProblem.sampleInput}</pre>
                             </div>
                           )}
                           {selectedProblem.sampleOutput && (
                             <div>
-                              <h4 className="font-semibold mb-2">Sample Output</h4>
-                              <pre className="bg-muted p-3 rounded-md text-sm overflow-x-auto">{selectedProblem.sampleOutput}</pre>
+                              <h4 className="font-semibold mb-2 text-[#6aa5ff]">Sample Output</h4>
+                              <pre className="bg-[#232b4d] border border-[#6aa5ff]/20 p-4 rounded-lg text-sm overflow-x-auto text-white/90">{selectedProblem.sampleOutput}</pre>
                             </div>
                           )}
                           <div>
-                            <h4 className="font-semibold mb-2">Custom Input</h4>
+                            <h4 className="font-semibold mb-2 text-[#6aa5ff]">Custom Input (Optional)</h4>
                             <textarea
-                              className="w-full h-28 rounded-md border bg-background p-2 text-sm"
-                              placeholder="Enter custom input (optional)"
+                              className="w-full h-32 rounded-lg border border-[#6aa5ff]/20 bg-[#232b4d] p-3 text-sm text-white focus:border-[#6aa5ff] focus:outline-none focus:ring-2 focus:ring-[#6aa5ff]/20"
+                              placeholder="Enter custom input to test your code..."
                               value={customInput}
                               onChange={(e) => setCustomInput(e.target.value)}
                             />
                           </div>
                         </TabsContent>
-                        <TabsContent value="constraints" className="flex-1 overflow-auto mt-3">
-                          <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                            {selectedProblem.constraints || "No constraints provided."}
+                        <TabsContent value="constraints" className="flex-1 overflow-auto mt-4">
+                          <div className="text-sm text-white/80 whitespace-pre-wrap bg-[#232b4d] border border-[#6aa5ff]/20 p-4 rounded-lg">
+                            {selectedProblem.constraints || "No specific constraints provided."}
                           </div>
                         </TabsContent>
                       </Tabs>
                     ) : (
-                      <div className="text-sm text-muted-foreground">Select a problem to get started.</div>
+                      <div className="text-sm text-white/60">Select a problem to get started.</div>
                     )}
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Resizer */}
-              {!editorFullscreen && (
-                <div
-                  className={`w-1.5 cursor-col-resize rounded-full bg-border hover:bg-primary/40 active:bg-primary/60 ${isResizing ? "bg-primary/60" : ""}`}
-                  onMouseDown={() => setIsResizing(true)}
-                />
-              )}
-
-              {/* Right: Editor panel */}
-              <div className="pl-3 flex-1 min-w-[280px]">
-                <Card className="h-full">
-                  <CardHeader className="py-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">Editor</CardTitle>
-                      <div className="text-xs text-muted-foreground">
-                        <span className="mr-3">Lang: {language}</span>
-                        {selectedProblem && (
-                          <span>
-                            TL: {selectedProblem.timeLimit}m • ML: {selectedProblem.memoryLimit}MB
-                          </span>
-                        )}
+              {/* Middle: Editor + Console */}
+              <div className={editorFullscreen ? "lg:col-span-5" : "lg:col-span-2"}>
+                <div className="h-full flex flex-col gap-4">
+                  {/* Code editor panel */}
+                  <Card className="flex-1 overflow-hidden bg-[#192345] border-[#6aa5ff]/20">
+                    <CardHeader className="py-3 px-4 bg-[#232b4d]/60 border-b border-[#6aa5ff]/20">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-white">Code Editor</span>
+                        <span className="text-xs text-white/60">Ctrl+Enter to Run • Shift+Enter to Submit</span>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="h-[calc(100%-4.5rem)] flex flex-col gap-3">
-                    <div className="border rounded-md overflow-hidden flex-1">
+                    </CardHeader>
+                    <CardContent className="p-0 h-[calc(100%-3.5rem)]">
                       <MonacoEditor
                         height="100%"
-                        language={language}
-                        value={code}
-                        onChange={(value) => setCode(value || "")}
+                        language={language === "cpp" ? "cpp" : language}
                         theme="vs-dark"
+                        value={code}
+                        onChange={(val) => setCode(val || "")}
                         options={{
-                          minimap: { enabled: false },
+                          minimap: { enabled: true },
                           fontSize: 14,
-                          lineNumbers: "on",
-                          scrollBeyondLastLine: false,
                           automaticLayout: true,
-                          tabSize: 2,
+                          scrollBeyondLastLine: false,
                           wordWrap: "on",
+                          padding: { top: 10, bottom: 10 },
                         }}
                       />
-                    </div>
-                    <Tabs defaultValue="console" className="flex-1 min-h-[140px]">
-                      <TabsList>
-                        <TabsTrigger value="console">Console</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="console" className="mt-2 h-[140px]">
-                        <div className="h-full w-full rounded-md border bg-muted/30 p-3 text-xs overflow-auto">
-                          {consoleOutput || "Console output will appear here after Run/Submit."}
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+
+                  {/* Console output panel */}
+                  <Card className="h-64 overflow-hidden bg-[#192345] border-[#6aa5ff]/20">
+                    <CardHeader className="py-3 px-4 bg-[#232b4d]/60 border-b border-[#6aa5ff]/20">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-white flex items-center gap-2">
+                          <Terminal className="h-4 w-4 text-[#6aa5ff]" />
+                          Console Output
+                        </span>
+                        {consoleOutput && (
+                          <span className="text-xs text-green-400">● Ready</span>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4 h-[calc(100%-3.5rem)] overflow-auto bg-[#0d1117]">
+                      <pre className="text-sm font-mono whitespace-pre-wrap text-white/90">
+                        {consoleOutput || (
+                          <span className="text-white/50 italic">Click &apos;Run&apos; to execute your code and see output here...</span>
+                        )}
+                      </pre>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
+
+              {/* Right: Proctoring sidebar - always visible */}
+              {!editorFullscreen && (
+                <div className="hidden lg:block lg:col-span-1">
+                  <div className="sticky top-24">
+                    <Proctoring 
+                      userId={session?.user?.id}
+                      sessionId={proctoringSessionId}
+                      onPermissionDenied={() => {
+                        toast({
+                          title: "Proctoring Required",
+                          description: "Camera access is mandatory for the coding exam.",
+                          variant: "destructive",
+                        })
+                      }}
+                      onViolation={(type) => {
+                        console.log("Violation detected:", type)
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -9,8 +9,12 @@ export async function middleware(req: NextRequest) {
 if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
 
+  console.log('Middleware - pathname:', pathname)
+  console.log('Middleware - token:', token ? { email: (token as any).email, role: (token as any).role } : null)
+
   // Not signed in
   if (!token) {
+    console.log('Middleware - no token, redirecting to login')
     const url = new URL("/admin/login", req.url)
     url.searchParams.set("error", "unauthorized")
     return NextResponse.redirect(url)
@@ -18,10 +22,13 @@ if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
 
   // Signed in but not an admin
   if ((token as any).role !== "ADMIN") {
+    console.log('Middleware - not admin role:', (token as any).role)
     const url = new URL("/admin/login", req.url)
     url.searchParams.set("error", "unauthorized")
     return NextResponse.redirect(url)
   }
+
+  console.log('Middleware - authorized as admin')
 }
 
   return NextResponse.next()

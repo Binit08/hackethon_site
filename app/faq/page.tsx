@@ -5,6 +5,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { HelpCircle, MessageCircle } from "lucide-react"
 
 const faqs = [
   {
@@ -51,26 +52,38 @@ const faqs = [
 
 export default function FAQPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-8 pt-24">
+    <div className="min-h-screen bg-[#151c2e] py-8 pt-24">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Frequently Asked Questions</h1>
-          <p className="text-muted-foreground">Find answers to common questions about the hackathon</p>
+          <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
+            <HelpCircle className="h-8 w-8 text-[#6aa5ff]" />
+            Frequently Asked Questions
+          </h1>
+          <p className="text-white/60">Find answers to common questions about the hackathon</p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Common Questions</CardTitle>
-            <CardDescription>Browse through our FAQ to find answers</CardDescription>
+        <Card className="bg-[#192345] border-[#6aa5ff]/20">
+          <CardHeader className="border-b border-[#6aa5ff]/10">
+            <CardTitle className="text-white flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-[#6aa5ff]" />
+              Common Questions
+            </CardTitle>
+            <CardDescription className="text-white/60">
+              Browse through our FAQ to find answers
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <Accordion type="single" collapsible className="w-full">
               {faqs.map((faq, index) => (
-                <AccordionItem key={index} value={`item-${index}`}>
-                  <AccordionTrigger className="text-left">
+                <AccordionItem 
+                  key={index} 
+                  value={`item-${index}`}
+                  className="border-[#6aa5ff]/10"
+                >
+                  <AccordionTrigger className="text-left text-white hover:text-[#6aa5ff] transition-colors">
                     {faq.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground">
+                  <AccordionContent className="text-white/70">
                     {faq.answer}
                   </AccordionContent>
                 </AccordionItem>

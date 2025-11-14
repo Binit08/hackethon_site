@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { Mail, Phone, MapPin, Send, MessageSquare } from "lucide-react"
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -61,61 +61,82 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-8 pt-24">
-      <div className="container mx-auto px-4 max-w-4xl">
+    <div className="min-h-screen bg-[#151c2e] py-8 pt-24">
+      <div className="container mx-auto px-4 max-w-5xl">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Contact Us</h1>
-          <p className="text-muted-foreground">Get in touch with us for any questions or support</p>
+          <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
+            <MessageSquare className="h-8 w-8 text-[#6aa5ff]" />
+            Contact Us
+          </h1>
+          <p className="text-white/60">Get in touch with us for any questions or support</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
-              <CardDescription>Reach out to us through these channels</CardDescription>
+          <Card className="bg-[#192345] border-[#6aa5ff]/20">
+            <CardHeader className="border-b border-[#6aa5ff]/10">
+              <CardTitle className="text-white">Contact Information</CardTitle>
+              <CardDescription className="text-white/60">
+                Reach out to us through these channels
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start gap-3">
-                <Mail className="h-5 w-5 mt-1 text-primary" />
+            <CardContent className="space-y-6 pt-6">
+              <div className="flex items-start gap-4">
+                <div className="bg-[#6aa5ff]/10 p-3 rounded-lg">
+                  <Mail className="h-6 w-6 text-[#6aa5ff]" />
+                </div>
                 <div>
-                  <p className="font-semibold">Email</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-semibold text-white mb-1">Email</p>
+                  <p className="text-sm text-white/60">
                     support@hackathon.nits.ac.in
                   </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <Phone className="h-5 w-5 mt-1 text-primary" />
+              <div className="flex items-start gap-4">
+                <div className="bg-[#6aa5ff]/10 p-3 rounded-lg">
+                  <Phone className="h-6 w-6 text-[#6aa5ff]" />
+                </div>
                 <div>
-                  <p className="font-semibold">Phone</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-semibold text-white mb-1">Phone</p>
+                  <p className="text-sm text-white/60">
                     +91-XXX-XXXX-XXXX
                   </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 mt-1 text-primary" />
+              <div className="flex items-start gap-4">
+                <div className="bg-[#6aa5ff]/10 p-3 rounded-lg">
+                  <MapPin className="h-6 w-6 text-[#6aa5ff]" />
+                </div>
                 <div>
-                  <p className="font-semibold">Address</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-semibold text-white mb-1">Address</p>
+                  <p className="text-sm text-white/60">
                     NIT Silchar, Assam, India
                   </p>
                 </div>
               </div>
+
+              {/* Additional Info */}
+              <div className="pt-4 border-t border-[#6aa5ff]/10">
+                <p className="text-sm text-white/60">
+                  <span className="text-white font-semibold">Response Time:</span> We typically respond within 24 hours
+                </p>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Send us a Message</CardTitle>
-              <CardDescription>Fill out the form below and we'll get back to you</CardDescription>
+          <Card className="bg-[#192345] border-[#6aa5ff]/20">
+            <CardHeader className="border-b border-[#6aa5ff]/10">
+              <CardTitle className="text-white">Send us a Message</CardTitle>
+              <CardDescription className="text-white/60">
+                Fill out the form below and we&apos;ll get back to you
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
+                  <Label htmlFor="name" className="text-white">Name</Label>
                   <Input
                     id="name"
+                    className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
@@ -124,10 +145,11 @@ export default function ContactPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-white">Email</Label>
                   <Input
                     id="email"
                     type="email"
+                    className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
                     value={formData.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
@@ -136,9 +158,10 @@ export default function ContactPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="subject">Subject</Label>
+                  <Label htmlFor="subject" className="text-white">Subject</Label>
                   <Input
                     id="subject"
+                    className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
                     value={formData.subject}
                     onChange={(e) =>
                       setFormData({ ...formData, subject: e.target.value })
@@ -147,10 +170,10 @@ export default function ContactPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="message">Message</Label>
+                  <Label htmlFor="message" className="text-white">Message</Label>
                   <textarea
                     id="message"
-                    className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="flex min-h-[120px] w-full rounded-md border border-[#6aa5ff]/20 bg-[#0f1729] px-3 py-2 text-sm text-white ring-offset-background placeholder:text-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa5ff] focus-visible:ring-offset-2"
                     value={formData.message}
                     onChange={(e) =>
                       setFormData({ ...formData, message: e.target.value })
@@ -158,8 +181,19 @@ export default function ContactPage() {
                     required
                   />
                 </div>
-                <Button type="submit" disabled={loading} className="w-full">
-                  {loading ? "Sending..." : "Send Message"}
+                <Button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="w-full bg-[#6aa5ff] hover:bg-[#5a95ef] text-white font-semibold"
+                >
+                  {loading ? (
+                    "Sending..."
+                  ) : (
+                    <span className="flex items-center gap-2 justify-center">
+                      <Send className="h-4 w-4" />
+                      Send Message
+                    </span>
+                  )}
                 </Button>
               </form>
             </CardContent>
