@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 import { 
   Loader2, Plus, Trash2, Edit, Camera, Users, FileText, 
   TrendingUp, Award, Activity, CheckCircle, XCircle, Clock,
-  BarChart3, Target, Shield
+  BarChart3, Target, Shield, Sparkles as SparklesIcon, Zap, Crown
 } from "lucide-react"
 import {
   Dialog,
@@ -28,6 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { BackgroundBeams } from "@/components/ui/background-beams"
+import { Sparkles } from "@/components/ui/sparkles"
+import { TextGenerateEffect } from "@/components/ui/text-generate-effect"
+import { MovingBorder } from "@/components/ui/moving-border"
+import { motion } from "framer-motion"
 
 interface Problem {
   id: string
@@ -189,7 +194,9 @@ export default function AdminPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-[#151c2e] text-white relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-sky-50 relative overflow-hidden">
+        <BackgroundBeams />
+        <Sparkles />
         
         {/* Background & Glass Effect - matching homepage */}
         <div className="pointer-events-none absolute inset-0">
@@ -201,53 +208,75 @@ export default function AdminPage() {
         {/* Header */}
         <header className="relative z-10 pt-10 pb-8">
           <div className="container mx-auto px-4 max-w-6xl">
-            <div className="bg-[#192345] rounded-2xl p-8">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="bg-white/80 backdrop-blur-xl rounded-2xl p-8 border border-blue-200 shadow-2xl"
+            >
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                 <div>
-                  <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2">
-                    Admin Panel
-                  </h1>
-                  <p className="text-[#6aa5ff] text-lg font-medium">
+                  <div className="flex items-center gap-4 mb-3">
+                    <motion.div
+                      animate={{ rotate: [0, 360] }}
+                      transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                      className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/50"
+                    >
+                      <Crown className="w-8 h-8 text-white" />
+                    </motion.div>
+                    <TextGenerateEffect 
+                      words="Admin Panel"
+                      className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900"
+                    />
+                  </div>
+                  <p className="text-gray-700 text-lg font-medium flex items-center gap-2">
+                    <Zap className="w-5 h-5" />
                     Manage problems, submissions and results for the hackathon
                   </p>
                 </div>
 
-                <div className="flex gap-3">
-                  <Button
-                    onClick={() => router.push("/")}
-                    variant="outline"
-                    className="bg-[#6aa5ff] border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/10 !text-white hover:!text-white"
-                  >
-                    ← Back to Home
-                  </Button>
-                  <Button
-                    onClick={() => router.push("/admin/proctoring")}
-                    variant="outline"
-                    className="bg-[#6aa5ff] border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/10 !text-white hover:!text-white"
-                  >
-                    <Camera className="mr-2 h-4 w-4" />
-                    Proctoring
-                  </Button>
+                <div className="flex flex-wrap gap-3">
+                  <MovingBorder duration={2000} className="bg-blue-100/50">
+                    <Button
+                      onClick={() => router.push("/")}
+                      variant="ghost"
+                      className="bg-transparent border-0 !text-gray-900 hover:!text-gray-700"
+                    >
+                      ← Back to Home
+                    </Button>
+                  </MovingBorder>
+                  <MovingBorder duration={2000} className="bg-purple-100/50">
+                    <Button
+                      onClick={() => router.push("/admin/proctoring")}
+                      variant="ghost"
+                      className="bg-transparent border-0 !text-gray-900 hover:!text-gray-700 flex items-center gap-2"
+                    >
+                      <Camera className="h-4 w-4" />
+                      Proctoring
+                    </Button>
+                  </MovingBorder>
                   <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button
-                        onClick={() => {
-                          setEditingProblem(null)
-                          setIsDialogOpen(true)
-                        }}
-                        className="flex items-center gap-2 bg-[#6aa5ff] hover:bg-[#3c7dff] text-white"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add Problem
-                      </Button>
+                      <MovingBorder duration={2000} className="bg-gradient-to-r from-blue-500 to-cyan-600">
+                        <Button
+                          onClick={() => {
+                            setEditingProblem(null)
+                            setIsDialogOpen(true)
+                          }}
+                          className="flex items-center gap-2 bg-transparent hover:bg-transparent text-white border-0"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Problem
+                        </Button>
+                      </MovingBorder>
                     </DialogTrigger>
 
-                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[#192345] border-[#6aa5ff]/20">
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur-xl border-blue-200">
                       <DialogHeader>
-                        <DialogTitle className="text-white">
+                        <DialogTitle className="text-gray-900">
                           {editingProblem ? "Edit Problem" : "Create Problem"}
                         </DialogTitle>
-                        <DialogDescription className="text-white/70">
+                        <DialogDescription className="text-gray-600">
                           {editingProblem
                             ? "Update the problem details"
                             : "Add a new problem to the hackathon"}
@@ -267,114 +296,138 @@ export default function AdminPage() {
                     </DialogContent>
                   </Dialog>
 
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setLoading(true)
-                      fetchProblems()
-                    }}
-                    className="bg-[#6aa5ff] border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/10 !text-white hover:!text-white"
-                  >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
-                  </Button>
+                  <MovingBorder duration={2000} className="bg-green-100/50">
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setLoading(true)
+                        fetchProblems()
+                      }}
+                      className="bg-transparent border-0 !text-gray-900 hover:!text-gray-700"
+                    >
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
+                    </Button>
+                  </MovingBorder>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </header>
 
         <main className="relative z-10 container mx-auto px-4 max-w-6xl pb-12">
           {/* Dashboard Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="bg-[#192345] border-[#6aa5ff]/20">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-white/60 mb-1">Total Problems</p>
-                    <p className="text-3xl font-bold text-white">{stats.totalProblems}</p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              whileHover={{ scale: 1.05, y: -5 }}
+            >
+              <Card className="bg-white/80 backdrop-blur-xl border-blue-200 shadow-xl hover:shadow-blue-500/50 transition-all">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1 font-semibold">Total Problems</p>
+                      <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">{stats.totalProblems}</p>
+                    </div>
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+                      <FileText className="h-6 w-6 text-white" />
+                    </div>
                   </div>
-                  <FileText className="h-10 w-10 text-[#6aa5ff]/40" />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card className="bg-[#192345] border-[#6aa5ff]/20">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-white/60 mb-1">Submissions</p>
-                    <p className="text-3xl font-bold text-white">{stats.totalSubmissions}</p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              whileHover={{ scale: 1.05, y: -5 }}
+            >
+              <Card className="bg-white/80 backdrop-blur-xl border-purple-200 shadow-xl hover:shadow-purple-500/50 transition-all">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1 font-semibold">Submissions</p>
+                      <p className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{stats.totalSubmissions}</p>
+                    </div>
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                      <Activity className="h-6 w-6 text-white" />
+                    </div>
                   </div>
-                  <Activity className="h-10 w-10 text-[#6aa5ff]/40" />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card className="bg-[#192345] border-[#6aa5ff]/20">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-white/60 mb-1">Accepted</p>
-                    <p className="text-3xl font-bold text-green-400">{stats.acceptedSubmissions}</p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              whileHover={{ scale: 1.05, y: -5 }}
+            >
+              <Card className="bg-white/80 backdrop-blur-xl border-green-200 shadow-xl hover:shadow-green-500/50 transition-all">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1 font-semibold">Accepted</p>
+                      <p className="text-4xl font-bold text-green-600">{stats.acceptedSubmissions}</p>
+                    </div>
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                      <CheckCircle className="h-6 w-6 text-white" />
+                    </div>
                   </div>
-                  <CheckCircle className="h-10 w-10 text-green-400/40" />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card className="bg-[#192345] border-[#6aa5ff]/20">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-white/60 mb-1">Avg Score</p>
-                    <p className="text-3xl font-bold text-yellow-400">{stats.averageScore}</p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              whileHover={{ scale: 1.05, y: -5 }}
+            >
+              <Card className="bg-white/80 backdrop-blur-xl border-yellow-200 shadow-xl hover:shadow-yellow-500/50 transition-all">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1 font-semibold">Active Users</p>
+                      <p className="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">{stats.activeUsers}</p>
+                    </div>
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center shadow-lg">
+                      <Users className="h-6 w-6 text-white" />
+                    </div>
                   </div>
-                  <Award className="h-10 w-10 text-yellow-400/40" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Teams */}
-            <Card className="bg-[#192345] border-[#6aa5ff]/20">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-white/60 mb-1">Teams</p>
-                    <p className="text-3xl font-bold text-white">{stats.totalTeams}</p>
-                    <p className="text-xs text-white/50 mt-1">New 24h: {stats.newTeams24h} • Invalid names: {stats.invalidTeamNames}</p>
-                  </div>
-                  <Users className="h-10 w-10 text-[#6aa5ff]/40" />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
 
           <Tabs defaultValue="problems" className="space-y-6">
-            <TabsList className="bg-[#192345] border border-[#6aa5ff]/20">
-              <TabsTrigger value="overview" className="data-[state=active]:bg-[#6aa5ff] data-[state=active]:text-white">Overview</TabsTrigger>
-              <TabsTrigger value="problems" className="data-[state=active]:bg-[#6aa5ff] data-[state=active]:text-white">Problems</TabsTrigger>
-              <TabsTrigger value="submissions" className="data-[state=active]:bg-[#6aa5ff] data-[state=active]:text-white">Submissions</TabsTrigger>
-              <TabsTrigger value="results" className="data-[state=active]:bg-[#6aa5ff] data-[state=active]:text-white">Results</TabsTrigger>
+            <TabsList className="bg-white/80 backdrop-blur-xl border border-blue-200">
+              <TabsTrigger value="overview" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-gray-700">Overview</TabsTrigger>
+              <TabsTrigger value="problems" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-gray-700">Problems</TabsTrigger>
+              <TabsTrigger value="submissions" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-gray-700">Submissions</TabsTrigger>
+              <TabsTrigger value="results" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-gray-700">Results</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview">
               <div className="grid gap-6">
                 {/* Recent Activity */}
-                <Card className="bg-[#192345] border-[#6aa5ff]/20">
+                <Card className="bg-white/80 backdrop-blur-xl border-blue-200 shadow-xl">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-[#6aa5ff]" />
+                    <CardTitle className="text-gray-900 flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-blue-600" />
                       Recent Submissions
                     </CardTitle>
-                    <CardDescription className="text-white/60">Latest 5 submissions from participants</CardDescription>
+                    <CardDescription className="text-gray-600">Latest 5 submissions from participants</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {recentSubmissions.length === 0 ? (
-                      <p className="text-white/60 text-center py-8">No submissions yet</p>
+                      <p className="text-gray-500 text-center py-8">No submissions yet</p>
                     ) : (
                       <div className="space-y-3">
                         {recentSubmissions.map((sub: any) => (
-                          <div key={sub.id} className="flex items-center justify-between p-4 bg-[#0f1729] rounded-lg border border-[#6aa5ff]/10">
+                          <div key={sub.id} className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
                             <div className="flex items-center gap-3">
                               {sub.status === 'ACCEPTED' ? (
                                 <CheckCircle className="h-5 w-5 text-green-400" />
@@ -384,12 +437,12 @@ export default function AdminPage() {
                                 <Clock className="h-5 w-5 text-yellow-400" />
                               )}
                               <div>
-                                <p className="text-white font-medium">{sub.problem?.title || 'Problem'}</p>
-                                <p className="text-white/50 text-sm">{new Date(sub.submittedAt).toLocaleString()}</p>
+                                <p className="text-gray-900 font-medium">{sub.problem?.title || 'Problem'}</p>
+                                <p className="text-gray-500 text-sm">{new Date(sub.submittedAt).toLocaleString()}</p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-white font-semibold">{sub.score} pts</p>
+                              <p className="text-gray-900 font-semibold">{sub.score} pts</p>
                               <p className={`text-sm ${
                                 sub.status === 'ACCEPTED' ? 'text-green-400' :
                                 sub.status === 'WRONG_ANSWER' ? 'text-red-400' :
@@ -406,10 +459,10 @@ export default function AdminPage() {
                 </Card>
 
                 {/* Quick Actions */}
-                <Card className="bg-[#192345] border-[#6aa5ff]/20">
+                <Card className="bg-white/80 backdrop-blur-xl border-purple-200 shadow-xl">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <Target className="h-5 w-5 text-[#6aa5ff]" />
+                    <CardTitle className="text-gray-900 flex items-center gap-2">
+                      <Target className="h-5 w-5 text-purple-600" />
                       Quick Actions
                     </CardTitle>
                   </CardHeader>
@@ -417,16 +470,16 @@ export default function AdminPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <Button 
                         onClick={() => router.push('/admin/proctoring')}
-                        className="h-24 bg-[#0f1729] border border-[#6aa5ff]/20 hover:bg-[#6aa5ff]/10 hover:border-[#6aa5ff] flex flex-col items-center justify-center gap-2 !text-white"
+                        className="h-24 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-400 flex flex-col items-center justify-center gap-2 !text-gray-900"
                       >
-                        <Shield className="h-8 w-8 text-[#6aa5ff]" />
+                        <Shield className="h-8 w-8 text-blue-600" />
                         <span>View Proctoring</span>
                       </Button>
                       <Button 
                         onClick={() => router.push('/leaderboard')}
-                        className="h-24 bg-[#0f1729] border border-[#6aa5ff]/20 hover:bg-[#6aa5ff]/10 hover:border-[#6aa5ff] flex flex-col items-center justify-center gap-2 !text-white"
+                        className="h-24 bg-purple-50 border border-purple-200 hover:bg-purple-100 hover:border-purple-400 flex flex-col items-center justify-center gap-2 !text-gray-900"
                       >
-                        <BarChart3 className="h-8 w-8 text-[#6aa5ff]" />
+                        <BarChart3 className="h-8 w-8 text-purple-600" />
                         <span>Leaderboard</span>
                       </Button>
                       <Button 
@@ -434,9 +487,9 @@ export default function AdminPage() {
                           setEditingProblem(null)
                           setIsDialogOpen(true)
                         }}
-                        className="h-24 bg-[#0f1729] border border-[#6aa5ff]/20 hover:bg-[#6aa5ff]/10 hover:border-[#6aa5ff] flex flex-col items-center justify-center gap-2 !text-white"
+                        className="h-24 bg-cyan-50 border border-cyan-200 hover:bg-cyan-100 hover:border-cyan-400 flex flex-col items-center justify-center gap-2 !text-gray-900"
                       >
-                        <Plus className="h-8 w-8 text-[#6aa5ff]" />
+                        <Plus className="h-8 w-8 text-cyan-600" />
                         <span>Add Problem</span>
                       </Button>
                     </div>
@@ -446,12 +499,12 @@ export default function AdminPage() {
             </TabsContent>
 
             <TabsContent value="problems">
-              <Card className="bg-[#192345] border-[#6aa5ff]/20">
+              <Card className="bg-white/80 backdrop-blur-xl border-blue-200 shadow-xl">
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <div>
-                      <CardTitle className="text-white text-2xl">Problems</CardTitle>
-                      <CardDescription className="text-white/70">Manage coding and MCQ problems</CardDescription>
+                      <CardTitle className="text-gray-900 text-2xl">Problems</CardTitle>
+                      <CardDescription className="text-gray-600">Manage coding and MCQ problems</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
@@ -459,10 +512,10 @@ export default function AdminPage() {
                 <CardContent>
                   {loading ? (
                     <div className="flex items-center justify-center py-20">
-                      <Loader2 className="h-8 w-8 animate-spin text-[#6aa5ff]" />
+                      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                     </div>
                   ) : problems.length === 0 ? (
-                    <div className="p-8 text-center text-white/70 bg-[#232b4d] rounded-xl">
+                    <div className="p-8 text-center text-gray-600 bg-blue-50 rounded-xl border border-blue-200">
                       No problems found. Click &quot;Add Problem&quot; to create your first problem.
                     </div>
                   ) : (
@@ -470,29 +523,29 @@ export default function AdminPage() {
                       {problems.filter(Boolean).map((problem: any) => (
                         <div
                           key={problem.id || problem._id}
-                          className="flex items-center justify-between p-6 border border-[#6aa5ff]/20 rounded-xl bg-[#232b4d] hover:border-[#6aa5ff]/40 transition-all"
+                          className="flex items-center justify-between p-6 border border-blue-200 rounded-xl bg-white hover:border-blue-400 hover:shadow-lg transition-all"
                         >
                           <div className="flex-1">
-                            <h3 className="font-bold text-xl mb-2">{problem?.title || 'Untitled Problem'}</h3>
+                            <h3 className="font-bold text-xl mb-2 text-gray-900">{problem?.title || 'Untitled Problem'}</h3>
                             <div className="flex gap-3 mb-3 flex-wrap">
-                              <span className="px-3 py-1 rounded-full bg-[#6aa5ff]/20 text-[#6aa5ff] text-sm font-medium">
+                              <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-medium">
                                 {problem?.type || 'UNKNOWN'}
                               </span>
                               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                problem?.difficulty === 'EASY' ? 'bg-green-500/20 text-green-400' :
-                                problem?.difficulty === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-400' :
-                                'bg-red-500/20 text-red-400'
+                                problem?.difficulty === 'EASY' ? 'bg-green-100 text-green-700' :
+                                problem?.difficulty === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-red-100 text-red-700'
                               }`}>
                                 {problem?.difficulty || 'N/A'}
                               </span>
-                              <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 text-sm font-medium">
+                              <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-medium">
                                 {problem?.points ?? 0} pts
                               </span>
-                              <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-sm font-medium">
+                              <span className="px-3 py-1 rounded-full bg-cyan-100 text-cyan-700 text-sm font-medium">
                                 Round {problem?.round ?? '?'}
                               </span>
                             </div>
-                            <p className="text-white/80 text-sm line-clamp-2">{problem?.description || 'No description provided.'}</p>
+                            <p className="text-gray-600 text-sm line-clamp-2">{problem?.description || 'No description provided.'}</p>
                           </div>
 
                           <div className="flex gap-2 ml-4">
@@ -503,7 +556,7 @@ export default function AdminPage() {
                                 setEditingProblem(problem)
                                 setIsDialogOpen(true)
                               }}
-                              className="border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/20 hover:border-[#6aa5ff] !text-white hover:!text-white"
+                              className="border-blue-300 hover:bg-blue-50 hover:border-blue-500 !text-gray-900"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -512,7 +565,7 @@ export default function AdminPage() {
                               variant="destructive"
                               size="sm"
                               onClick={() => handleDelete(problem.id || problem._id)}
-                              className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 !text-red-400 hover:!text-red-300"
+                              className="bg-red-50 hover:bg-red-100 border border-red-300 !text-red-600 hover:!text-red-700"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -526,25 +579,25 @@ export default function AdminPage() {
             </TabsContent>
 
             <TabsContent value="submissions">
-              <Card className="bg-[#192345] border-[#6aa5ff]/20">
+              <Card className="bg-white/80 backdrop-blur-xl border-blue-200 shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-white text-2xl">All Submissions</CardTitle>
-                  <CardDescription className="text-white/70">View and manage all submissions</CardDescription>
+                  <CardTitle className="text-gray-900 text-2xl">All Submissions</CardTitle>
+                  <CardDescription className="text-gray-600">View and manage all submissions</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-white/70 bg-[#232b4d] p-6 rounded-xl">Submissions view will be implemented here.</p>
+                  <p className="text-gray-600 bg-blue-50 p-6 rounded-xl border border-blue-200">Submissions view will be implemented here.</p>
                 </CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="results">
-              <Card className="bg-[#192345] border-[#6aa5ff]/20">
+              <Card className="bg-white/80 backdrop-blur-xl border-blue-200 shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-white text-2xl">Results</CardTitle>
-                  <CardDescription className="text-white/70">View and export results</CardDescription>
+                  <CardTitle className="text-gray-900 text-2xl">Results</CardTitle>
+                  <CardDescription className="text-gray-600">View and export results</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-white/70 bg-[#232b4d] p-6 rounded-xl">Results view will be implemented here.</p>
+                  <p className="text-gray-600 bg-blue-50 p-6 rounded-xl border border-blue-200">Results view will be implemented here.</p>
                 </CardContent>
               </Card>
             </TabsContent>

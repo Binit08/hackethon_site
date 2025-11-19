@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server"
+import { NextResponse, NextRequest } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import connectDB from "@/lib/mongodb"
 import Submission from "@/models/Submission"
 import User from "@/models/User"
 import Problem from "@/models/Problem"
+import { rateLimit, RATE_LIMITS, getRateLimitIdentifier } from "@/middleware/rate-limit"
 
 interface AutoItem {
   problemId: string
@@ -12,12 +13,17 @@ interface AutoItem {
   language?: string
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+
+    // Apply rate limiting (Comment 4)
+    const identifier = getRateLimitIdentifier(request, session.user.id)
+    const rateLimitResponse = rateLimit(RATE_LIMITS.submission)(request, identifier)
+    if (rateLimitResponse) return rateLimitResponse
 
     await connectDB()
 
@@ -26,8 +32,17 @@ export async function POST(request: Request) {
     const text = await request.text()
     try {
       body = JSON.parse(text)
-    } catch {
-      body = { items: [] }
+    } catch (parseError: any) {
+      console.error('Auto-submit JSON parse error:', {
+        error: parseError.message,
+        userId: session.user.id,
+        textLength: text.length,
+        textPreview: text.substring(0, 100)
+      })
+      return NextResponse.json(
+        { error: "Invalid JSON payload" },
+        { status: 400 }
+      )
     }
 
     const items: AutoItem[] = Array.isArray(body?.items) ? body.items : []

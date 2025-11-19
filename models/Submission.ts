@@ -45,6 +45,7 @@ const SubmissionSchema = new Schema<ISubmission>(
     score: {
       type: Number,
       default: 0,
+      min: [0, 'Score cannot be negative'],
     },
     runtime: Number,
     memory: Number,

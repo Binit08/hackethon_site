@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -191,14 +192,14 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#151c2e] p-4 pt-24">
-      <Card className="w-full max-w-2xl bg-[#192345] border-[#6aa5ff]/20">
-        <CardHeader className="text-center border-b border-[#6aa5ff]/10">
-          <div className="mx-auto mb-4 w-16 h-16 bg-[#6aa5ff]/10 rounded-full flex items-center justify-center">
-            <UserPlus className="h-8 w-8 text-[#6aa5ff]" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-cyan-50 to-sky-50 p-4 pt-24">
+      <Card className="w-full max-w-2xl bg-white/80 backdrop-blur-sm border-blue-200 shadow-xl">
+        <CardHeader className="text-center border-b border-blue-100">
+          <div className="mx-auto mb-4 w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+            <UserPlus className="h-8 w-8 text-blue-600" />
           </div>
-          <CardTitle className="text-2xl text-white">Create Account</CardTitle>
-          <CardDescription className="text-white/60">
+          <CardTitle className="text-2xl text-gray-900">Create Account</CardTitle>
+          <CardDescription className="text-gray-600">
             Step {step} of 5: Complete the registration
           </CardDescription>
           <div className="flex gap-2 mt-4">
@@ -206,7 +207,7 @@ export default function RegisterPage() {
               <div
                 key={s}
                 className={`h-2 flex-1 rounded ${
-                  s <= step ? "bg-[#6aa5ff]" : "bg-[#0f1729]"
+                  s <= step ? "bg-blue-600" : "bg-gray-200"
                 } transition-colors`}
               />
             ))}
@@ -224,8 +225,8 @@ export default function RegisterPage() {
                   className="space-y-4"
                 >
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="text-white flex items-center gap-2">
-                      <User className="h-4 w-4 text-[#6aa5ff]" />
+                    <Label htmlFor="name" className="text-gray-900 flex items-center gap-2">
+                      <User className="h-4 w-4 text-blue-600" />
                       Full Name
                     </Label>
                     <Input
@@ -233,17 +234,17 @@ export default function RegisterPage() {
                       id="name"
                       type="text"
                       placeholder="John Doe"
-                      className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
+                      className="bg-white border-blue-200 text-gray-900 placeholder:text-gray-400"
                       value={formData.name}
                       onChange={(e) => updateFormData("name", e.target.value)}
                       required
                       autoComplete="name"
                     />
                     {errors.name && (
-                      <p className="text-sm text-red-400">{errors.name}</p>
+                      <p className="text-sm text-red-500">{errors.name}</p>
                     )}
                   </div>
-                  <Button type="button" onClick={handleNext} className="w-full bg-[#6aa5ff] hover:bg-[#5a95ef] text-white font-semibold">
+                  <Button type="button" onClick={handleNext} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
                     Next
                   </Button>
                 </motion.div>
@@ -258,8 +259,8 @@ export default function RegisterPage() {
                   className="space-y-4"
                 >
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-white flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-[#6aa5ff]" />
+                    <Label htmlFor="email" className="text-gray-900 flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-blue-600" />
                       Email
                     </Label>
                     <Input
@@ -267,21 +268,21 @@ export default function RegisterPage() {
                       id="email"
                       type="email"
                       placeholder="you@example.com"
-                      className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
+                      className="bg-white border-blue-200 text-gray-900 placeholder:text-gray-400"
                       value={formData.email}
                       onChange={(e) => updateFormData("email", e.target.value)}
                       required
                       autoComplete="email"
                     />
                     {errors.email && (
-                      <p className="text-sm text-red-400">{errors.email}</p>
+                      <p className="text-sm text-red-500">{errors.email}</p>
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={handleBack} className="flex-1 bg-[#0f1729] border-[#6aa5ff]/20 text-white hover:bg-[#1f2d4f]">
+                    <Button type="button" variant="outline" onClick={handleBack} className="flex-1 bg-white border-blue-200 text-gray-700 hover:bg-blue-50">
                       Back
                     </Button>
-                    <Button type="button" onClick={handleNext} className="flex-1 bg-[#6aa5ff] hover:bg-[#5a95ef] text-white font-semibold">
+                    <Button type="button" onClick={handleNext} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold">
                       Next
                     </Button>
                   </div>
@@ -297,8 +298,8 @@ export default function RegisterPage() {
                   className="space-y-4"
                 >
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-white flex items-center gap-2">
-                      <Lock className="h-4 w-4 text-[#6aa5ff]" />
+                    <Label htmlFor="password" className="text-gray-900 flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-blue-600" />
                       Password
                     </Label>
                     <Input
@@ -306,40 +307,40 @@ export default function RegisterPage() {
                       id="password"
                       type="password"
                       placeholder="••••••••"
-                      className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
+                      className="bg-white border-blue-200 text-gray-900 placeholder:text-gray-400"
                       value={formData.password}
                       onChange={(e) => updateFormData("password", e.target.value)}
                       required
                       autoComplete="new-password"
                     />
                     {errors.password && (
-                      <p className="text-sm text-red-400">{errors.password}</p>
+                      <p className="text-sm text-red-500">{errors.password}</p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="text-white flex items-center gap-2">
-                      <Lock className="h-4 w-4 text-[#6aa5ff]" />
+                    <Label htmlFor="confirmPassword" className="text-gray-900 flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-blue-600" />
                       Confirm Password
                     </Label>
                     <Input
                       id="confirmPassword"
                       type="password"
                       placeholder="••••••••"
-                      className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
+                      className="bg-white border-blue-200 text-gray-900 placeholder:text-gray-400"
                       value={formData.confirmPassword}
                       onChange={(e) => updateFormData("confirmPassword", e.target.value)}
                       required
                       autoComplete="new-password"
                     />
                     {errors.confirmPassword && (
-                      <p className="text-sm text-red-400">{errors.confirmPassword}</p>
+                      <p className="text-sm text-red-500">{errors.confirmPassword}</p>
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={handleBack} className="flex-1 bg-[#0f1729] border-[#6aa5ff]/20 text-white hover:bg-[#1f2d4f]">
+                    <Button type="button" variant="outline" onClick={handleBack} className="flex-1 bg-white border-blue-200 text-gray-700 hover:bg-blue-50">
                       Back
                     </Button>
-                    <Button type="button" onClick={handleNext} className="flex-1 bg-[#6aa5ff] hover:bg-[#5a95ef] text-white font-semibold">
+                    <Button type="button" onClick={handleNext} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold">
                       Next
                     </Button>
                   </div>
@@ -355,13 +356,13 @@ export default function RegisterPage() {
                   className="space-y-4"
                 >
                   <div className="space-y-2">
-                    <Label htmlFor="teamSize" className="text-white flex items-center gap-2">
-                      <Users className="h-4 w-4 text-[#6aa5ff]" />
+                    <Label htmlFor="teamSize" className="text-gray-900 flex items-center gap-2">
+                      <Users className="h-4 w-4 text-blue-600" />
                       Team Size
                     </Label>
                     <select
                       id="teamSize"
-                      className="flex h-10 w-full rounded-md border border-[#6aa5ff]/20 bg-[#0f1729] text-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa5ff] focus-visible:ring-offset-2"
+                      className="flex h-10 w-full rounded-md border border-blue-200 bg-white text-gray-900 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                       value={formData.teamSize}
                       onChange={(e) => updateFormData("teamSize", parseInt(e.target.value))}
                     >
@@ -373,28 +374,28 @@ export default function RegisterPage() {
                   </div>
                   {formData.teamSize > 1 && (
                     <div className="space-y-2">
-                      <Label htmlFor="teamName" className="text-white">Team Name</Label>
+                      <Label htmlFor="teamName" className="text-gray-900">Team Name</Label>
                       <Input
                         ref={teamNameInputRef}
                         id="teamName"
                         type="text"
                         placeholder="Team Name"
-                        className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
+                        className="bg-white border-blue-200 text-gray-900 placeholder:text-gray-400"
                         value={formData.teamName}
                         onChange={(e) => updateFormData("teamName", e.target.value)}
                         required={formData.teamSize > 1}
                       />
-                      <p className="text-xs text-white/50">Allowed: letters, numbers, spaces, hyphen. 3–30 characters. Example: &quot;Code Ninjas&quot;</p>
+                      <p className="text-xs text-gray-500">Allowed: letters, numbers, spaces, hyphen. 3–30 characters. Example: &quot;Code Ninjas&quot;</p>
                       {errors.teamName && (
-                        <p className="text-sm text-red-400">{errors.teamName}</p>
+                        <p className="text-sm text-red-500">{errors.teamName}</p>
                       )}
                     </div>
                   )}
                   <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={handleBack} className="flex-1 bg-[#0f1729] border-[#6aa5ff]/20 text-white hover:bg-[#1f2d4f]">
+                    <Button type="button" variant="outline" onClick={handleBack} className="flex-1 bg-white border-blue-200 text-gray-700 hover:bg-blue-50">
                       Back
                     </Button>
-                    <Button type="button" onClick={handleNext} className="flex-1 bg-[#6aa5ff] hover:bg-[#5a95ef] text-white font-semibold">
+                    <Button type="button" onClick={handleNext} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold">
                       Next
                     </Button>
                   </div>
@@ -409,36 +410,36 @@ export default function RegisterPage() {
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-4"
                 >
-                  <div className="bg-[#0f1729] border border-[#6aa5ff]/20 rounded-xl p-6 mb-6">
-                    <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
-                      <CreditCard className="h-5 w-5 text-[#6aa5ff]" />
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+                    <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <CreditCard className="h-5 w-5 text-blue-600" />
                       Complete Payment
                     </h4>
                     
                     {/* Payment Amount */}
-                    <div className="bg-[#6aa5ff]/10 border border-[#6aa5ff]/20 rounded-lg p-4 mb-4">
+                    <div className="bg-blue-100 border border-blue-200 rounded-lg p-4 mb-4">
                       <div className="text-center">
-                        <div className="text-sm text-white/60 mb-1">Registration Fee</div>
-                        <div className="text-3xl font-bold text-[#6aa5ff]">₹1</div>
-                        <div className="text-xs text-white/50 mt-1">(Demo Amount)</div>
+                        <div className="text-sm text-gray-600 mb-1">Registration Fee</div>
+                        <div className="text-3xl font-bold text-blue-600">₹1</div>
+                        <div className="text-xs text-gray-500 mt-1">(Demo Amount)</div>
                       </div>
                     </div>
 
                     {/* UPI Payment */}
                     <div className="mb-4">
                       <div className="flex items-center gap-2 mb-2">
-                        <Smartphone className="h-4 w-4 text-[#6aa5ff]" />
-                        <span className="font-semibold text-white text-sm">UPI Payment</span>
+                        <Smartphone className="h-4 w-4 text-blue-600" />
+                        <span className="font-semibold text-gray-900 text-sm">UPI Payment</span>
                       </div>
-                      <div className="bg-[#192345] rounded-lg p-3">
-                        <div className="text-xs text-white/60 mb-1">UPI ID:</div>
+                      <div className="bg-white rounded-lg p-3 border border-blue-100">
+                        <div className="text-xs text-gray-600 mb-1">UPI ID:</div>
                         <div className="flex items-center justify-between">
-                          <code className="text-[#6aa5ff] font-mono text-sm">hackathon@nits.sbi</code>
+                          <code className="text-blue-600 font-mono text-sm">hackathon@nits.sbi</code>
                           <Button 
                             type="button"
                             size="sm"
                             variant="outline"
-                            className="text-xs bg-[#0f1729] border-[#6aa5ff]/20 text-white hover:bg-[#1f2d4f]"
+                            className="text-xs bg-white border-blue-200 text-gray-700 hover:bg-blue-50"
                             onClick={() => {
                               navigator.clipboard.writeText("hackathon@nits.sbi")
                               toast({ title: "Copied!", description: "UPI ID copied to clipboard" })
@@ -453,15 +454,15 @@ export default function RegisterPage() {
                     {/* QR Code */}
                     <div className="mb-4">
                       <div className="flex items-center gap-2 mb-2">
-                        <QrCode className="h-4 w-4 text-[#6aa5ff]" />
-                        <span className="font-semibold text-white text-sm">Scan QR Code</span>
+                        <QrCode className="h-4 w-4 text-blue-600" />
+                        <span className="font-semibold text-gray-900 text-sm">Scan QR Code</span>
                       </div>
                       <div className="bg-white rounded-lg p-4 flex justify-center">
                         <div className="w-32 h-32 bg-gray-200 rounded flex items-center justify-center text-xs text-center text-gray-600">
                           [QR Code]<br/>Scan & Pay<br/>₹1
                         </div>
                       </div>
-                      <div className="text-xs text-white/50 text-center mt-2">
+                      <div className="text-xs text-gray-500 text-center mt-2">
                         Google Pay • PhonePe • Paytm • Any UPI App
                       </div>
                     </div>
@@ -470,8 +471,8 @@ export default function RegisterPage() {
                   {/* Transaction Details Input */}
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="transactionId" className="text-white flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-[#6aa5ff]" />
+                      <Label htmlFor="transactionId" className="text-gray-900 flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-blue-600" />
                         Transaction ID / UTR Number
                       </Label>
                       <Input
@@ -479,19 +480,19 @@ export default function RegisterPage() {
                         id="transactionId"
                         type="text"
                         placeholder="Enter 12-digit transaction ID"
-                        className="bg-[#0f1729] border-[#6aa5ff]/20 text-white placeholder:text-white/40"
+                        className="bg-white border-blue-200 text-gray-900 placeholder:text-gray-400"
                         value={formData.transactionId}
                         onChange={(e) => updateFormData("transactionId", e.target.value)}
                         required
                       />
                       {errors.transactionId && (
-                        <p className="text-sm text-red-400">{errors.transactionId}</p>
+                        <p className="text-sm text-red-500">{errors.transactionId}</p>
                       )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="paymentScreenshot" className="text-white flex items-center gap-2">
-                        <Upload className="h-4 w-4 text-[#6aa5ff]" />
+                      <Label htmlFor="paymentScreenshot" className="text-gray-900 flex items-center gap-2">
+                        <Upload className="h-4 w-4 text-blue-600" />
                         Upload Payment Screenshot
                       </Label>
                       <input
@@ -504,40 +505,41 @@ export default function RegisterPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        className="w-full bg-[#0f1729] border-[#6aa5ff]/20 text-white hover:bg-[#1f2d4f]"
+                        className="w-full bg-white border-blue-200 text-gray-700 hover:bg-blue-50"
                         onClick={() => document.getElementById('paymentScreenshot')?.click()}
                       >
                         {formData.paymentScreenshot ? "Change Screenshot" : "Choose File"}
                       </Button>
                       {screenshotPreview && (
-                        <div className="mt-2">
-                          <img 
+                        <div className="mt-2 relative w-full h-40">
+                          <Image 
                             src={screenshotPreview} 
                             alt="Payment Screenshot" 
-                            className="w-full h-40 object-contain bg-white rounded-lg"
+                            fill
+                            className="object-contain bg-white rounded-lg border border-blue-200"
                           />
                         </div>
                       )}
                       {formData.paymentScreenshot && (
-                        <p className="text-xs text-green-400">✓ {formData.paymentScreenshot.name}</p>
+                        <p className="text-xs text-green-600">✓ {formData.paymentScreenshot.name}</p>
                       )}
                       {errors.paymentScreenshot && (
-                        <p className="text-sm text-red-400">{errors.paymentScreenshot}</p>
+                        <p className="text-sm text-red-500">{errors.paymentScreenshot}</p>
                       )}
                     </div>
                   </div>
 
-                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
-                    <p className="text-xs text-yellow-400">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p className="text-xs text-yellow-700">
                       <strong>Note:</strong> Your registration will be verified within 24 hours after payment confirmation.
                     </p>
                   </div>
 
                   <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={handleBack} className="flex-1 bg-[#0f1729] border-[#6aa5ff]/20 text-white hover:bg-[#1f2d4f]">
+                    <Button type="button" variant="outline" onClick={handleBack} className="flex-1 bg-white border-blue-200 text-gray-700 hover:bg-blue-50">
                       Back
                     </Button>
-                    <Button type="submit" disabled={loading} className="flex-1 bg-[#6aa5ff] hover:bg-[#5a95ef] text-white font-semibold">
+                    <Button type="submit" disabled={loading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold">
                       {loading ? "Registering..." : "Complete Registration"}
                     </Button>
                   </div>
@@ -546,8 +548,8 @@ export default function RegisterPage() {
             </AnimatePresence>
           </form>
           <div className="mt-6 text-center text-sm">
-            <span className="text-white/60">Already have an account? </span>
-            <Link href="/auth/signin" className="text-[#6aa5ff] hover:text-[#5a95ef] font-semibold">
+            <span className="text-gray-600">Already have an account? </span>
+            <Link href="/auth/signin" className="text-blue-600 hover:text-blue-700 font-semibold">
               Sign In
             </Link>
           </div>

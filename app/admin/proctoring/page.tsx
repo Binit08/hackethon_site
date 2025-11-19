@@ -5,8 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, Camera, Clock, Eye, User, Video } from "lucide-react"
+import { AlertTriangle, Camera, Clock, Eye, User, Video, Shield, Activity } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { BackgroundBeams } from "@/components/ui/background-beams"
+import { Sparkles } from "@/components/ui/sparkles"
+import { TextGenerateEffect } from "@/components/ui/text-generate-effect"
+import { motion } from "framer-motion"
 
 interface Violation {
   _id: string
@@ -94,71 +98,101 @@ export default function ProctoringAdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#151c2e] flex items-center justify-center">
-        <div className="text-white">Loading proctoring data...</div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-sky-50 flex items-center justify-center">
+        <div className="text-gray-900">Loading proctoring data...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#151c2e] text-white">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-sky-50 relative overflow-hidden">
+      <BackgroundBeams />
+      <Sparkles />
       {/* Background */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(87,97,255,0.15),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(255,75,149,0.12),transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.15),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(168,85,247,0.12),transparent_55%)]" />
       </div>
 
       <div className="relative z-10 container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Proctoring Monitor</h1>
-          <p className="text-white/70">Track exam integrity and violations</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 text-center"
+        >
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <motion.div
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+              className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/50"
+            >
+              <Shield className="w-8 h-8 text-white" />
+            </motion.div>
+          </div>
+          <TextGenerateEffect 
+            words="Proctoring Monitor"
+            className="text-4xl font-bold mb-2 text-gray-900"
+          />
+          <p className="text-gray-700 flex items-center justify-center gap-2">
+            <Activity className="w-4 h-4" />
+            Track exam integrity and violations
+          </p>
+        </motion.div>
 
         {/* Filters */}
         <div className="mb-6 flex gap-4">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48 bg-[#232b4d] border-[#6aa5ff]/20 text-white">
+            <SelectTrigger className="w-48 bg-white/80 backdrop-blur-xl border-blue-200 text-gray-900">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-[#232b4d] border-[#6aa5ff]/20">
-              <SelectItem value="ALL" className="text-white">All Sessions</SelectItem>
-              <SelectItem value="ACTIVE" className="text-white">Active</SelectItem>
-              <SelectItem value="COMPLETED" className="text-white">Completed</SelectItem>
-              <SelectItem value="SUSPENDED" className="text-white">Suspended</SelectItem>
+            <SelectContent className="bg-white/90 backdrop-blur-xl border-blue-200">
+              <SelectItem value="ALL" className="text-gray-900">All Sessions</SelectItem>
+              <SelectItem value="ACTIVE" className="text-gray-900">Active</SelectItem>
+              <SelectItem value="COMPLETED" className="text-gray-900">Completed</SelectItem>
+              <SelectItem value="SUSPENDED" className="text-gray-900">Suspended</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Sessions Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {sessions.map((session) => {
+          {sessions.map((session, index) => {
             const suspicion = getSuspicionLevel(session.suspicionScore)
             return (
-              <Card key={session._id} className="bg-[#192345] border-[#6aa5ff]/20">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <Video className="h-5 w-5 text-[#6aa5ff]" />
-                      {session.userId?.name || "Unknown User"}
-                    </CardTitle>
-                    <Badge className={getStatusColor(session.status)}>
-                      {session.status}
-                    </Badge>
-                  </div>
-                  <CardDescription className="text-white/70 text-xs">
-                    {session.userId?.email || "No email"}
-                  </CardDescription>
-                </CardHeader>
+              <motion.div
+                key={session._id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ scale: 1.02, y: -5 }}
+              >
+                <Card className="bg-white/80 backdrop-blur-xl border-blue-200 shadow-xl hover:shadow-blue-500/50 transition-all">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-gray-900 flex items-center gap-2">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center">
+                          <Video className="h-5 w-5 text-white" />
+                        </div>
+                        <span className="text-lg">{session.userId?.name || "Unknown User"}</span>
+                      </CardTitle>
+                      <Badge className={getStatusColor(session.status)}>
+                        {session.status}
+                      </Badge>
+                    </div>
+                    <CardDescription className="text-gray-600 text-xs">
+                      {session.userId?.email || "No email"}
+                    </CardDescription>
+                  </CardHeader>
                 <CardContent className="space-y-3">
                   {/* Session Info */}
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-[#232b4d] p-2 rounded">
-                      <div className="text-white/60">Exam Type</div>
-                      <div className="text-white font-semibold">{session.examType}</div>
+                    <div className="bg-blue-50 p-2 rounded border border-blue-200">
+                      <div className="text-gray-600">Exam Type</div>
+                      <div className="text-gray-900 font-semibold">{session.examType}</div>
                     </div>
-                    <div className="bg-[#232b4d] p-2 rounded">
-                      <div className="text-white/60">Duration</div>
-                      <div className="text-white font-semibold">
+                    <div className="bg-blue-50 p-2 rounded border border-blue-200">
+                      <div className="text-gray-600">Duration</div>
+                      <div className="text-gray-900 font-semibold">
                         {session.endTime 
                           ? `${Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 60000)}m`
                           : "Ongoing"
@@ -168,47 +202,47 @@ export default function ProctoringAdminPage() {
                   </div>
 
                   {/* Violation Stats */}
-                  <div className="bg-[#232b4d] p-3 rounded space-y-2">
+                  <div className="bg-purple-50 p-3 rounded border border-purple-200 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-white/60">Total Violations</span>
-                      <span className="text-lg font-bold text-white">{session.totalViolations}</span>
+                      <span className="text-xs text-gray-600">Total Violations</span>
+                      <span className="text-lg font-bold text-gray-900">{session.totalViolations}</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-xs">
                       <div className="text-center">
-                        <div className="text-red-400 font-bold">{session.highSeverityCount}</div>
-                        <div className="text-white/60">High</div>
+                        <div className="text-red-600 font-bold">{session.highSeverityCount}</div>
+                        <div className="text-gray-600">High</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-yellow-400 font-bold">{session.mediumSeverityCount}</div>
-                        <div className="text-white/60">Medium</div>
+                        <div className="text-yellow-600 font-bold">{session.mediumSeverityCount}</div>
+                        <div className="text-gray-600">Medium</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-green-400 font-bold">{session.lowSeverityCount}</div>
-                        <div className="text-white/60">Low</div>
+                        <div className="text-green-600 font-bold">{session.lowSeverityCount}</div>
+                        <div className="text-gray-600">Low</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Suspicion Score */}
-                  <div className="bg-[#232b4d] p-3 rounded">
+                  <div className="bg-purple-50 p-3 rounded border border-purple-200">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-white/60">Suspicion Level</span>
+                      <span className="text-xs text-gray-600">Suspicion Level</span>
                       <span className={`text-xs font-bold ${suspicion.color}`}>
                         {suspicion.level}
                       </span>
                     </div>
-                    <div className="w-full bg-[#151c2e] rounded-full h-2">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
                         className={`h-2 rounded-full ${
-                          session.suspicionScore >= 80 ? 'bg-red-500' :
-                          session.suspicionScore >= 50 ? 'bg-orange-500' :
-                          session.suspicionScore >= 30 ? 'bg-yellow-500' :
-                          'bg-green-500'
+                          session.suspicionScore >= 80 ? 'bg-red-600' :
+                          session.suspicionScore >= 50 ? 'bg-orange-600' :
+                          session.suspicionScore >= 30 ? 'bg-yellow-600' :
+                          'bg-green-600'
                         }`}
                         style={{ width: `${Math.min(session.suspicionScore, 100)}%` }}
                       />
                     </div>
-                    <div className="text-right text-xs text-white/60 mt-1">
+                    <div className="text-right text-xs text-gray-600 mt-1">
                       {session.suspicionScore}/100
                     </div>
                   </div>
@@ -241,7 +275,7 @@ export default function ProctoringAdminPage() {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="flex-1 bg-[#232b4d] border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/20 text-white"
+                      className="flex-1 bg-blue-50 border-blue-200 hover:bg-blue-100 text-gray-900"
                     >
                       <Eye className="mr-2 h-3 w-3" />
                       View Details
@@ -249,13 +283,14 @@ export default function ProctoringAdminPage() {
                   </div>
                 </CardContent>
               </Card>
+              </motion.div>
             )
           })}
         </div>
 
         {sessions.length === 0 && (
-          <Card className="bg-[#192345] border-[#6aa5ff]/20">
-            <CardContent className="py-12 text-center text-white/60">
+          <Card className="bg-white/80 backdrop-blur-xl border-blue-200 shadow-xl">
+            <CardContent className="py-12 text-center text-gray-600">
               No proctoring sessions found
             </CardContent>
           </Card>

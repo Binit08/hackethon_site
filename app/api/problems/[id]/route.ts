@@ -53,6 +53,29 @@ export async function PUT(
     await connectDB()
 
     const body = await request.json()
+    
+    // Use shared validation and sanitization (Comment 3)
+    const { validateProblem, sanitizeHtml } = await import('@/lib/validation')
+    
+    // Validate if full problem data is provided
+    if (body.title || body.description) {
+      const validation = validateProblem(body)
+      if (!validation.valid) {
+        return NextResponse.json(
+          { error: "Validation failed", details: validation.errors },
+          { status: 400 }
+        )
+      }
+    }
+    
+    // Sanitize HTML fields
+    if (body.description) {
+      body.description = sanitizeHtml(body.description)
+    }
+    if (body.constraints) {
+      body.constraints = sanitizeHtml(body.constraints)
+    }
+    
     const problem = await Problem.findByIdAndUpdate(
       params.id,
       body,
@@ -91,6 +114,10 @@ export async function DELETE(
     await Problem.findByIdAndDelete(params.id)
     await TestCase.deleteMany({ problemId: params.id })
     await MCQOption.deleteMany({ problemId: params.id })
+    
+    // Cascade delete submissions or mark as orphaned (ERROR #8)
+    const Submission = (await import('@/models/Submission')).default
+    await Submission.deleteMany({ problemId: params.id })
 
     return NextResponse.json({ message: "Problem deleted" })
   } catch (error: any) {

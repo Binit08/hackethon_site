@@ -5,6 +5,7 @@ import { Providers } from "./providers"
 import { Toaster } from "@/components/ui/toaster"
 import { ConditionalNavbar } from "@/components/conditional-navbar"
 import { ConditionalFooter } from "@/components/conditional-footer"
+import ErrorBoundary from "@/components/error-boundary"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -21,12 +22,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <Providers>
-          <ConditionalNavbar />
-          {children}
-          <ConditionalFooter />
-          <Toaster />
-        </Providers>
+        <ErrorBoundary>
+          <Providers>
+            <ConditionalNavbar />
+            {children}
+            <ConditionalFooter />
+            <Toaster />
+          </Providers>
+        </ErrorBoundary>
       </body>
     </html>
   )

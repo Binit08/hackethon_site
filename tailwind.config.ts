@@ -19,14 +19,17 @@ const config = {
     },
     extend: {
       colors: {
-        "hack-blue": "#5865f2",
-    "hack-purple": "#9b8cff",
-    "hack-pink": "#ff6ab0",
-    "hack-yellow": "#ffd56a",
-    "hack-teal": "#7dd3fc",
-    "hack-dark": "rgba(255,255,255,0.75)",
+        // Cyberpunk-inspired color palette
+        "cyber-primary": "#00f0ff",
+        "cyber-secondary": "#ff006e",
+        "cyber-accent": "#ffbe0b",
+        "cyber-purple": "#8338ec",
+        "cyber-green": "#06ffa5",
+        "cyber-dark": "#0a0e27",
+        "cyber-darker": "#050816",
         
-        'glass': 'rgba(255,255,255,0.70)',
+        'glass': 'rgba(255,255,255,0.05)',
+        'glass-border': 'rgba(255,255,255,0.1)',
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -67,7 +70,19 @@ const config = {
         sm: "calc(var(--radius) - 4px)",
       },
       backgroundImage: {
-        'hackathon': 'linear-gradient(160deg, #3a86ff 0%, #7209b7 53%, #f72585 100%)',
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+        'cyber-grid': "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(15 23 42 / 0.04)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e\")",
+        'glow-primary': 'radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.1), transparent)',
+        'glow-secondary': 'radial-gradient(circle at 50% 50%, rgba(255, 0, 110, 0.1), transparent)',
+      },
+      boxShadow: {
+        'cyber': '0 0 20px rgba(0, 240, 255, 0.3)',
+        'cyber-lg': '0 0 40px rgba(0, 240, 255, 0.4)',
+        'cyber-pink': '0 0 20px rgba(255, 0, 110, 0.3)',
+        'cyber-green': '0 0 20px rgba(6, 255, 165, 0.3)',
+        'neon': '0 0 5px theme(colors.cyber-primary), 0 0 20px theme(colors.cyber-primary)',
+        'neon-pink': '0 0 5px theme(colors.cyber-secondary), 0 0 20px theme(colors.cyber-secondary)',
       },
       keyframes: {
         "accordion-down": {
@@ -90,6 +105,32 @@ const config = {
           from: { transform: "translateY(-100%)" },
           to: { transform: "translateY(0)" },
         },
+        "glow": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.5" },
+        },
+        "pulse-glow": {
+          "0%, 100%": { 
+            boxShadow: "0 0 20px rgba(0, 240, 255, 0.3)",
+            transform: "scale(1)"
+          },
+          "50%": { 
+            boxShadow: "0 0 40px rgba(0, 240, 255, 0.5)",
+            transform: "scale(1.02)"
+          },
+        },
+        "float": {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
+        "slide-right": {
+          from: { transform: "translateX(-100%)" },
+          to: { transform: "translateX(0)" },
+        },
+        "shimmer": {
+          "0%": { backgroundPosition: "-1000px 0" },
+          "100%": { backgroundPosition: "1000px 0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -97,6 +138,11 @@ const config = {
         "fade-in": "fade-in 0.3s ease-out",
         "slide-in-from-bottom": "slide-in-from-bottom 0.3s ease-out",
         "slide-in-from-top": "slide-in-from-top 0.3s ease-out",
+        "glow": "glow 2s ease-in-out infinite",
+        "pulse-glow": "pulse-glow 3s ease-in-out infinite",
+        "float": "float 3s ease-in-out infinite",
+        "slide-right": "slide-right 0.5s ease-out",
+        "shimmer": "shimmer 3s linear infinite",
       },
     },
   },

@@ -3,6 +3,13 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import connectDB from "./mongodb"
 import User from "@/models/User"
 import bcrypt from "bcryptjs"
+import { 
+  isAccountLocked, 
+  getLockoutTimeRemaining, 
+  recordFailedLogin, 
+  clearFailedLogins,
+  getRemainingAttempts 
+} from "./account-lockout"
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,11 +24,18 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
+        // Check if account is locked (ERROR #37)
+        if (isAccountLocked(credentials.email)) {
+          const remainingTime = getLockoutTimeRemaining(credentials.email)
+          throw new Error(`Account locked due to too many failed login attempts. Try again in ${Math.ceil(remainingTime / 60)} minutes.`)
+        }
+
         await connectDB()
 
         const user = await User.findOne({ email: credentials.email })
 
         if (!user) {
+          recordFailedLogin(credentials.email)
           return null
         }
 
@@ -31,8 +45,16 @@ export const authOptions: NextAuthOptions = {
         )
 
         if (!isPasswordValid) {
+          recordFailedLogin(credentials.email)
+          const remaining = getRemainingAttempts(credentials.email)
+          if (remaining > 0 && remaining <= 2) {
+            throw new Error(`Invalid credentials. ${remaining} attempts remaining before account lockout.`)
+          }
           return null
         }
+
+        // Clear failed login attempts on successful login
+        clearFailedLogins(credentials.email)
 
         return {
           id: (user as any)._id.toString(),
@@ -56,7 +78,6 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = (user as any).role
-        console.log('JWT callback - user role:', (user as any).role)
       }
       return token
     },
@@ -64,7 +85,6 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string
         session.user.role = token.role as string
-        console.log('Session callback - token role:', token.role)
       }
       return session
     },

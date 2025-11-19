@@ -4,7 +4,12 @@
  */
 
 const JUDGE0_API_URL = process.env.JUDGE0_API_URL || "https://judge0-ce.p.rapidapi.com"
-const JUDGE0_API_KEY = process.env.JUDGE0_API_KEY || ""
+const JUDGE0_API_KEY = process.env.JUDGE0_API_KEY
+
+// Warn in development, but allow build to succeed (Comment 8)
+if (!JUDGE0_API_KEY && process.env.NODE_ENV === 'development') {
+  console.warn('Warning: JUDGE0_API_KEY is not set. Code execution will not work.')
+}
 
 // Language ID mapping for Judge0 CE
 // Full list: https://ce.judge0.com/#statuses-and-languages-language-get
@@ -48,6 +53,11 @@ export interface Judge0Result {
  * Submit code to Judge0 for execution
  */
 export async function submitCode(submission: Judge0Submission): Promise<string> {
+  // Validate API key at function level (Comment 8)
+  if (!JUDGE0_API_KEY) {
+    throw new Error('Code execution is not configured. JUDGE0_API_KEY is missing.')
+  }
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   }
@@ -74,9 +84,15 @@ export async function submitCode(submission: Judge0Submission): Promise<string> 
 }
 
 /**
- * Get submission result by token (with polling)
+ * Get submission result by token (with polling and timeout)
+ * Implements ERROR #7: No Timeout on Judge0 Polling
  */
-export async function getResult(token: string, maxAttempts = 10): Promise<Judge0Result> {
+export async function getResult(token: string, maxAttempts = 10, timeoutMs = 30000): Promise<Judge0Result> {
+  // Validate API key at function level (Comment 8)
+  if (!JUDGE0_API_KEY) {
+    throw new Error('Code execution is not configured. JUDGE0_API_KEY is missing.')
+  }
+
   const headers: Record<string, string> = {}
 
   if (JUDGE0_API_URL.includes("rapidapi.com")) {
@@ -84,7 +100,14 @@ export async function getResult(token: string, maxAttempts = 10): Promise<Judge0
     headers["X-RapidAPI-Key"] = JUDGE0_API_KEY
   }
 
+  const startTime = Date.now()
+
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // Check absolute timeout
+    if (Date.now() - startTime > timeoutMs) {
+      throw new Error(`Judge0 execution timeout - exceeded ${timeoutMs}ms limit`)
+    }
+
     const response = await fetch(
       `${JUDGE0_API_URL}/submissions/${token}?base64_encoded=false`,
       { headers }
@@ -104,7 +127,8 @@ export async function getResult(token: string, maxAttempts = 10): Promise<Judge0
     }
 
     // Wait before polling again (exponential backoff)
-    await new Promise((resolve) => setTimeout(resolve, Math.min(1000 * Math.pow(1.5, attempt), 3000)))
+    const delay = Math.min(1000 * Math.pow(1.5, attempt), 3000)
+    await new Promise((resolve) => setTimeout(resolve, delay))
   }
 
   throw new Error("Judge0 execution timeout - result not ready after polling")

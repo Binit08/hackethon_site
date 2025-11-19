@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,7 +27,9 @@ export default function MCQRoundPage() {
   const [submitting, setSubmitting] = useState(false)
   const [proctoringSessionId] = useState(`mcq-${session?.user?.id || 'guest'}-${Date.now()}`)
   const router = useRouter()
-  const { toast } = useToast()
+  const { toast} = useToast()
+  const submittingRef = useRef(false) // Prevent duplicate submissions (Comment 6)
+  const hasSubmittedRef = useRef(false) // Track if already submitted (Comment 6)
 
   const fetchProblems = useCallback(async () => {
     try {
@@ -61,6 +63,12 @@ export default function MCQRoundPage() {
   // MCQ demo round: always open, no schedule gating
 
   const handleSubmit = async () => {
+    // Prevent duplicate submissions (Comment 6)
+    if (submittingRef.current || hasSubmittedRef.current) {
+      return
+    }
+    
+    submittingRef.current = true
     setSubmitting(true)
     try {
       const submissions = await Promise.all(
@@ -86,6 +94,7 @@ export default function MCQRoundPage() {
         })
       )
 
+      hasSubmittedRef.current = true // Mark as submitted (Comment 6)
       toast({
         title: "Success",
         description: `Successfully submitted ${submissions.length} answer(s)!`,
@@ -102,6 +111,7 @@ export default function MCQRoundPage() {
         description: error.message || "Failed to submit answers",
         variant: "destructive",
       })
+      submittingRef.current = false // Allow retry on error
     } finally {
       setSubmitting(false)
     }
@@ -119,10 +129,14 @@ export default function MCQRoundPage() {
     }
 
     const autoSubmit = () => {
-      if (!hasAnswers()) return
+      // Prevent duplicate auto-submissions (Comment 6)
+      if (!hasAnswers() || submittingRef.current || hasSubmittedRef.current) return
+      
+      submittingRef.current = true
       try {
         const blob = new Blob([makeBeaconPayload()], { type: 'application/json' })
         navigator.sendBeacon('/api/submissions/auto', blob)
+        hasSubmittedRef.current = true // Mark as submitted
       } catch (e) {
         // best effort fallback
         fetch('/api/submissions/auto', {
@@ -171,21 +185,19 @@ export default function MCQRoundPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#151c2e] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6aa5ff]" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#151c2e] text-white relative overflow-hidden">
+    <div className="min-h-screen bg-gray-50 text-gray-900 relative overflow-hidden">
       
-      {/* Background & Glass Effect - matching homepage */}
+      {/* Background & Glass Effect - light theme */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(87,97,255,0.15),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(255,75,149,0.12),transparent_55%)]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/50" />
       </div>
-      <div className="absolute inset-0 bg-white/0 backdrop-blur-[2px]" />
 
       {/* Floating Proctoring Widget */}
       <div className="fixed bottom-4 right-4 w-80 z-50 hidden lg:block">
@@ -207,16 +219,16 @@ export default function MCQRoundPage() {
 
       <div className="relative z-10 container mx-auto px-4 max-w-4xl py-8 pt-24">
         <div className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4">MCQ Round</h1>
-          <p className="text-[#6aa5ff] text-lg font-medium">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 text-gray-900">MCQ Round</h1>
+          <p className="text-blue-700 text-lg font-medium">
             Answer all questions carefully. You can review your answers before submitting.
           </p>
         </div>
 
         {problems.length === 0 ? (
-          <Card className="bg-[#192345] border-[#6aa5ff]/20">
+          <Card className="bg-white border-gray-200 shadow-sm">
             <CardContent className="py-12">
-              <p className="text-center text-white/70 text-lg">
+              <p className="text-center text-gray-600 text-lg">
                 No MCQ problems available at the moment. Please check back later.
               </p>
             </CardContent>
@@ -225,23 +237,23 @@ export default function MCQRoundPage() {
           <>
             <div className="space-y-6">
               {problems.map((problem, index) => (
-                <Card key={problem._id} className="bg-[#192345] border-[#6aa5ff]/20 hover:border-[#6aa5ff]/40 transition-all">
+                <Card key={problem._id} className="bg-white border-gray-200 hover:border-blue-300 transition-all shadow-sm">
                   <CardHeader>
-                    <CardTitle className="text-white text-xl flex justify-between items-center">
+                    <CardTitle className="text-gray-900 text-xl flex justify-between items-center">
                       <span>Question {index + 1}</span>
-                      <span className="text-sm font-medium px-3 py-1 rounded-full bg-purple-500/20 text-purple-400">
+                      <span className="text-sm font-medium px-3 py-1 rounded-full bg-purple-100 text-purple-700">
                         {problem.points} points
                       </span>
                     </CardTitle>
-                    <CardDescription className="text-white/80 text-base mt-3">
+                    <CardDescription className="text-gray-700 text-base mt-3">
                       {problem.description}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <Label className="text-white/90 text-sm">Your Answer:</Label>
+                      <Label className="text-gray-700 text-sm font-medium">Your Answer:</Label>
                       <textarea
-                        className="flex min-h-[100px] w-full rounded-md border border-[#6aa5ff]/20 bg-[#232b4d] px-4 py-3 text-sm text-white ring-offset-background placeholder:text-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa5ff] focus-visible:ring-offset-2"
+                        className="flex min-h-[100px] w-full rounded-md border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 ring-offset-background placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                         placeholder="Type your answer here..."
                         value={selectedAnswers[problem._id] || ""}
                         onChange={(e) =>
@@ -257,13 +269,13 @@ export default function MCQRoundPage() {
               ))}
             </div>
 
-            <div className="mt-8 flex flex-col md:flex-row justify-between items-center gap-4 bg-[#192345] border border-[#6aa5ff]/20 rounded-xl p-6">
-              <p className="text-sm text-white/70">
-                <span className="text-[#6aa5ff] font-semibold">
+            <div className="mt-8 flex flex-col md:flex-row justify-between items-center gap-4 bg-blue-50 border border-blue-200 rounded-xl p-6">
+              <p className="text-sm text-gray-700">
+                <span className="text-blue-700 font-semibold">
                   {Object.keys(selectedAnswers).filter(key => selectedAnswers[key].trim()).length}
                 </span>
                 {" "}of{" "}
-                <span className="text-[#6aa5ff] font-semibold">{problems.length}</span>
+                <span className="text-blue-700 font-semibold">{problems.length}</span>
                 {" "}questions answered
               </p>
               <Button
@@ -271,7 +283,7 @@ export default function MCQRoundPage() {
                 disabled={submitting 
                   || Object.keys(selectedAnswers).filter(key => selectedAnswers[key].trim()).length !== problems.length}
                 size="lg"
-                className="bg-[#6aa5ff] hover:bg-[#3c7dff] disabled:opacity-50"
+                className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
               >
                 {submitting ? (
                   <>

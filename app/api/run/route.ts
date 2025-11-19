@@ -37,6 +37,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Problem not found" }, { status: 404 })
     }
 
+    // Check if Judge0 is configured
+    if (!process.env.JUDGE0_API_KEY) {
+      return NextResponse.json({
+        error: "Code execution is not configured. Please set JUDGE0_API_KEY in your environment variables. Get a free API key from https://rapidapi.com/judge0-official/api/judge0-ce"
+      }, { status: 503 })
+    }
+
     // Execute code using Judge0
     const usedInput: string = (input ?? problem.sampleInput ?? "").toString()
     const timeLimitSeconds = problem.timeLimit ? Math.min(problem.timeLimit * 60, 10) : 5 // cap at 10s

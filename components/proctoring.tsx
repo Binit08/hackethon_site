@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle, Camera, Eye, EyeOff, Users, Wifi, WifiOff } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import * as faceapi from 'face-api.js'
 
 interface ProctoringProps {
   onViolation?: (violation: ViolationType) => void
@@ -19,6 +20,7 @@ type ViolationType =
   | "TAB_SWITCH"
   | "CAMERA_BLOCKED"
   | "WINDOW_BLUR"
+  | "DIFFERENT_PERSON"
 
 interface Violation {
   type: ViolationType
@@ -39,21 +41,93 @@ export function Proctoring({
   const [currentStatus, setCurrentStatus] = useState<string>("Initializing...")
   const [faceCount, setFaceCount] = useState<number>(0)
   const [isConnected, setIsConnected] = useState(true)
+  const [modelsLoaded, setModelsLoaded] = useState(false)
+  const [storedDescriptor, setStoredDescriptor] = useState<Float32Array | null>(null)
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const consecutiveNoFaceCount = useRef<number>(0)
+  const consecutiveLookingAwayCount = useRef<number>(0)
+  const cameraRestartAttempts = useRef<number>(0)
+  const violationCooldowns = useRef<Map<ViolationType, number>>(new Map())
+  const eventQueue = useRef<Array<any>>([])
+  const flushTimerRef = useRef<NodeJS.Timeout | null>(null)
   const { toast } = useToast()
 
+  // Load face-api.js models on mount
   useEffect(() => {
-    startProctoring()
-    setupVisibilityDetection()
+    loadModels()
+    // Start event queue flushing
+    flushTimerRef.current = setInterval(() => {
+      flushEventQueue()
+    }, 5000) // Flush every 5 seconds
     
     return () => {
-      cleanup()
+      if (flushTimerRef.current) {
+        clearInterval(flushTimerRef.current)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (modelsLoaded) {
+      startProctoring()
+      const cleanupVisibility = setupVisibilityDetection()
+      
+      return () => {
+        cleanup()
+        if (cleanupVisibility) {
+          cleanupVisibility()
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modelsLoaded])
+
+  const loadModels = async () => {
+    try {
+      setCurrentStatus("Loading AI models...")
+      
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+        faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+        faceapi.nets.faceRecognitionNet.loadFromUri('/models')
+      ])
+      
+      setModelsLoaded(true)
+      setCurrentStatus("Models loaded successfully")
+      
+      // Load stored face descriptor for this user if available
+      await loadUserFaceDescriptor()
+      
+    } catch (error) {
+      console.error('Failed to load models:', error)
+      setCurrentStatus("Failed to load AI models")
+      toast({
+        title: "Model Loading Error",
+        description: "Face detection models failed to load. Proctoring may be limited.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const loadUserFaceDescriptor = async () => {
+    try {
+      if (!userId) return
+      
+      const response = await fetch(`/api/users/${userId}/face-descriptor`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.faceDescriptor) {
+          setStoredDescriptor(new Float32Array(data.faceDescriptor))
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load face descriptor:', error)
+    }
+  }
 
   const startProctoring = async () => {
     try {
@@ -116,76 +190,127 @@ export function Proctoring({
   }
 
   const startFaceDetection = () => {
-    // Simple face detection using video analysis
-    // In production, use face-api.js or similar library
+    // Real-time face detection using face-api.js
     detectionIntervalRef.current = setInterval(() => {
       detectFaces()
     }, 3000) // Check every 3 seconds
   }
 
   const detectFaces = async () => {
-    if (!videoRef.current || !canvasRef.current) return
+    if (!videoRef.current || !modelsLoaded) return
+    if (videoRef.current.readyState !== 4) return // Wait for video to be ready
 
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    const context = canvas.getContext('2d')
+    try {
+      const detections = await faceapi
+        .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks()
+        .withFaceDescriptors()
 
-    if (!context) return
+      setFaceCount(detections.length)
 
-    // Set canvas size to match video
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
+      // No face detected
+      if (detections.length === 0) {
+        consecutiveNoFaceCount.current++
+        
+        // Only trigger violation after 2 consecutive detections (6 seconds)
+        if (consecutiveNoFaceCount.current >= 2) {
+          const violation: Violation = {
+            type: "NO_FACE",
+            timestamp: Date.now(),
+            severity: "HIGH",
+            details: "No face detected in frame"
+          }
+          handleViolation(violation)
+          setCurrentStatus("⚠️ No face detected")
+        }
+      } 
+      // Multiple faces detected
+      else if (detections.length > 1) {
+        consecutiveNoFaceCount.current = 0
+        const violation: Violation = {
+          type: "MULTIPLE_FACES",
+          timestamp: Date.now(),
+          severity: "HIGH",
+          details: `${detections.length} faces detected`
+        }
+        handleViolation(violation)
+        setCurrentStatus(`⚠️ ${detections.length} faces detected`)
+      } 
+      // Exactly one face - perform additional checks
+      else {
+        consecutiveNoFaceCount.current = 0
+        const detection = detections[0]
+        
+        // Check if person is looking away
+        const isLookingAway = checkIfLookingAway(detection.landmarks)
+        if (isLookingAway) {
+          consecutiveLookingAwayCount.current++
+          
+          if (consecutiveLookingAwayCount.current >= 3) {
+            const violation: Violation = {
+              type: "LOOKING_AWAY",
+              timestamp: Date.now(),
+              severity: "MEDIUM",
+              details: "Candidate not looking at screen"
+            }
+            handleViolation(violation)
+            setCurrentStatus("⚠️ Looking away from screen")
+          }
+        } else {
+          consecutiveLookingAwayCount.current = 0
+          setCurrentStatus("Monitoring active - Face detected")
+        }
 
-    // Draw current video frame to canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-    // Get image data for analysis
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-    
-    // Simple brightness detection (if screen is too dark, likely covered)
-    const avgBrightness = getAverageBrightness(imageData)
-    
-    if (avgBrightness < 20) {
-      // Camera likely blocked
-      const violation: Violation = {
-        type: "CAMERA_BLOCKED",
-        timestamp: Date.now(),
-        severity: "HIGH",
-        details: "Camera appears to be covered or blocked"
+        // Verify identity if we have a stored descriptor
+        if (storedDescriptor && detection.descriptor) {
+          const distance = faceapi.euclideanDistance(storedDescriptor, detection.descriptor)
+          
+          // Distance > 0.6 means different person
+          if (distance > 0.6) {
+            const violation: Violation = {
+              type: "DIFFERENT_PERSON",
+              timestamp: Date.now(),
+              severity: "HIGH",
+              details: `Face mismatch detected (distance: ${distance.toFixed(2)})`
+            }
+            handleViolation(violation)
+            setCurrentStatus("⚠️ Different person detected")
+          }
+        }
       }
-      handleViolation(violation)
-      setFaceCount(0)
-    } else if (avgBrightness > 30) {
-      // Assume face detected (simplified)
-      setFaceCount(1)
-      setCurrentStatus("Monitoring active - Face detected")
-    }
 
-    // In production, integrate face-api.js for real face detection:
-    // const detections = await faceapi.detectAllFaces(video)
-    // setFaceCount(detections.length)
-    // if (detections.length === 0) handleViolation("NO_FACE")
-    // if (detections.length > 1) handleViolation("MULTIPLE_FACES")
+    } catch (error) {
+      console.error('Face detection error:', error)
+      // Don't spam violations for detection errors
+    }
   }
 
-  const getAverageBrightness = (imageData: ImageData): number => {
-    const data = imageData.data
-    let sum = 0
-    
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i]
-      const g = data[i + 1]
-      const b = data[i + 2]
-      const brightness = (r + g + b) / 3
-      sum += brightness
+  const checkIfLookingAway = (landmarks: faceapi.FaceLandmarks68): boolean => {
+    // Get key facial landmark positions
+    const nose = landmarks.getNose()
+    const leftEye = landmarks.getLeftEye()
+    const rightEye = landmarks.getRightEye()
+    const mouth = landmarks.getMouth()
+
+    // Calculate center of face
+    const faceCenter = {
+      x: (leftEye[0].x + rightEye[3].x) / 2,
+      y: (leftEye[0].y + rightEye[3].y) / 2
     }
-    
-    return sum / (data.length / 4)
+
+    // Check nose position relative to eye center
+    const nosePoint = nose[3] // Tip of nose
+    const horizontalOffset = Math.abs(nosePoint.x - faceCenter.x)
+    const eyeDistance = Math.abs(rightEye[3].x - leftEye[0].x)
+
+    // If nose is significantly offset from center, person is looking away
+    // Threshold: 30% of eye distance
+    return horizontalOffset > eyeDistance * 0.3
   }
 
   const setupVisibilityDetection = () => {
-    // Detect tab switching
-    document.addEventListener('visibilitychange', () => {
+    // Named handler functions for proper cleanup
+    const handleVisibilityChange = () => {
       if (document.hidden) {
         const violation: Violation = {
           type: "TAB_SWITCH",
@@ -195,10 +320,9 @@ export function Proctoring({
         }
         handleViolation(violation)
       }
-    })
+    }
 
-    // Detect window blur
-    window.addEventListener('blur', () => {
+    const handleWindowBlur = () => {
       const violation: Violation = {
         type: "WINDOW_BLUR",
         timestamp: Date.now(),
@@ -206,38 +330,87 @@ export function Proctoring({
         details: "User switched to another window"
       }
       handleViolation(violation)
-    })
+    }
 
-    // Detect if trying to disable camera
+    const handleOffline = () => {
+      setIsConnected(false)
+      logEvent("NETWORK_DISCONNECTED", "MEDIUM")
+    }
+
+    const handleOnline = () => {
+      setIsConnected(true)
+      logEvent("NETWORK_RECONNECTED", "LOW")
+    }
+
+    // Detect tab switching
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Detect window blur
+    window.addEventListener('blur', handleWindowBlur)
+
+    // Detect network disconnection
+    window.addEventListener('offline', handleOffline)
+    window.addEventListener('online', handleOnline)
+
+    // Detect if camera track ends
+    const trackEndedHandlers: (() => void)[] = []
     if (stream) {
       stream.getVideoTracks().forEach(track => {
-        track.addEventListener('ended', () => {
+        const handleTrackEnded = () => {
+          // Check restart attempts
+          if (cameraRestartAttempts.current >= 2) {
+            // Too many restart attempts, stop trying
+            setCurrentStatus("⚠️ Camera unavailable - Exam cannot proceed")
+            const violation: Violation = {
+              type: "CAMERA_BLOCKED",
+              timestamp: Date.now(),
+              severity: "HIGH",
+              details: "Camera was disabled and could not be restarted"
+            }
+            handleViolation(violation)
+            return
+          }
+          
+          // Attempt restart
+          cameraRestartAttempts.current++
           const violation: Violation = {
             type: "CAMERA_BLOCKED",
             timestamp: Date.now(),
             severity: "HIGH",
-            details: "Camera was disabled during exam"
+            details: `Camera was disabled during exam (restart attempt ${cameraRestartAttempts.current})`
           }
           handleViolation(violation)
-          // Try to restart
           startProctoring()
-        })
+        }
+        track.addEventListener('ended', handleTrackEnded)
+        trackEndedHandlers.push(() => track.removeEventListener('ended', handleTrackEnded))
       })
     }
 
-    // Detect network disconnection
-    window.addEventListener('offline', () => {
-      setIsConnected(false)
-      logEvent("NETWORK_DISCONNECTED", "MEDIUM")
-    })
-
-    window.addEventListener('online', () => {
-      setIsConnected(true)
-      logEvent("NETWORK_RECONNECTED", "LOW")
-    })
+    // Return cleanup function
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleWindowBlur)
+      window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('online', handleOnline)
+      trackEndedHandlers.forEach(cleanup => cleanup())
+    }
   }
 
   const handleViolation = (violation: Violation) => {
+    // Check cooldown - skip if same violation was triggered recently
+    const now = Date.now()
+    const lastTrigger = violationCooldowns.current.get(violation.type) || 0
+    const cooldownMs = 90000 // 90 seconds cooldown
+    
+    if (now - lastTrigger < cooldownMs) {
+      // Still in cooldown, skip logging
+      return
+    }
+    
+    // Update cooldown timestamp
+    violationCooldowns.current.set(violation.type, now)
+    
     setViolations(prev => [...prev, violation])
     
     // Update status
@@ -248,8 +421,16 @@ export function Proctoring({
       onViolation(violation.type)
     }
 
-    // Log to backend
-    logViolation(violation)
+    // Queue violation for batched logging
+    queueEvent({
+      type: 'violation',
+      data: {
+        userId,
+        sessionId,
+        violation,
+        timestamp: new Date().toISOString(),
+      }
+    })
 
     // Show toast notification
     toast({
@@ -259,47 +440,107 @@ export function Proctoring({
     })
   }
 
-  const logViolation = async (violation: Violation) => {
-    try {
-      await fetch('/api/proctoring/violations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          sessionId,
-          violation,
-          timestamp: new Date().toISOString(),
+  const queueEvent = (event: any) => {
+    eventQueue.current.push(event)
+  }
+
+  const flushEventQueue = async () => {
+    if (eventQueue.current.length === 0 || !navigator.onLine) {
+      return
+    }
+
+    const events = [...eventQueue.current]
+    eventQueue.current = []
+
+    // Process violations and events separately with retry
+    const violations = events.filter(e => e.type === 'violation')
+    const otherEvents = events.filter(e => e.type === 'event')
+
+    if (violations.length > 0) {
+      // Use batch endpoint with correct payload structure (Comment 2)
+      await sendWithRetry('/api/proctoring/violations/batch', { violations: violations.map(v => v.data) }, 2)
+    }
+
+    if (otherEvents.length > 0) {
+      await sendWithRetry('/api/proctoring/events', otherEvents.map(e => e.data), 2)
+    }
+  }
+
+  const sendWithRetry = async (url: string, data: any, maxRetries: number) => {
+    let attempt = 0
+    
+    while (attempt <= maxRetries) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          // Send data as-is (Comment 2: batch endpoint expects { violations: [...] })
+          body: JSON.stringify(data)
         })
-      })
-    } catch (error) {
-      console.error('Failed to log violation:', error)
+        
+        if (response.ok) {
+          // Success
+          return
+        }
+        
+        if (response.status < 500) {
+          // Client error (don't retry)
+          console.error(`Proctoring API error ${response.status} for ${url}:`, await response.text())
+          return
+        }
+        
+        // Server error, retry with backoff
+        throw new Error(`Server error: ${response.status}`)
+      } catch (error) {
+        attempt++
+        if (attempt > maxRetries) {
+          // Failed after retries, log and drop the events (Comment 2)
+          console.error(`Failed to send events to ${url} after ${maxRetries} retries:`, error)
+          return
+        }
+        // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
+      }
     }
   }
 
   const logEvent = async (eventType: string, severity: string) => {
-    try {
-      await fetch('/api/proctoring/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          sessionId,
-          eventType,
-          severity,
-          timestamp: new Date().toISOString(),
-        })
-      })
-    } catch (error) {
-      console.error('Failed to log event:', error)
-    }
+    queueEvent({
+      type: 'event',
+      data: {
+        userId,
+        sessionId,
+        eventType,
+        severity,
+        timestamp: new Date().toISOString(),
+      }
+    })
   }
 
-  const cleanup = useCallback(() => {
+  const cleanup = useCallback(async () => {
+    // Flush any remaining events before cleanup
+    if (eventQueue.current.length > 0 && navigator.onLine) {
+      const events = [...eventQueue.current]
+      eventQueue.current = []
+      const violations = events.filter(e => e.type === 'violation')
+      const otherEvents = events.filter(e => e.type === 'event')
+      if (violations.length > 0) {
+        // Use batch endpoint (Comment 2)
+        await sendWithRetry('/api/proctoring/violations/batch', { violations: violations.map(v => v.data) }, 2)
+      }
+      if (otherEvents.length > 0) {
+        await sendWithRetry('/api/proctoring/events', otherEvents.map(e => e.data), 2)
+      }
+    }
+    
     if (stream) {
       stream.getTracks().forEach(track => track.stop())
     }
     if (detectionIntervalRef.current) {
       clearInterval(detectionIntervalRef.current)
+    }
+    if (flushTimerRef.current) {
+      clearInterval(flushTimerRef.current)
     }
   }, [stream])
 
@@ -356,6 +597,20 @@ export function Proctoring({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {/* Consent and Data Usage Disclosure */}
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded p-2">
+          <div className="flex items-start gap-1.5">
+            <AlertTriangle className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />
+            <div className="text-xs text-blue-300">
+              <p className="font-semibold">Biometric Monitoring Active</p>
+              <p className="text-blue-300/80 mt-0.5 text-xs">
+                This system captures and analyzes your face for identity verification during the exam. 
+                A face template is securely stored and used only for exam integrity purposes.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Video Preview - Always on, cannot be disabled */}
         <div className="relative rounded-lg overflow-hidden bg-black border border-[#6aa5ff]/20">
           <video

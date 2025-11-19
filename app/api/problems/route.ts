@@ -53,7 +53,6 @@ export async function POST(request: Request) {
     await connectDB()
 
     const body = await request.json()
-    console.log("Received problem data:", body)
     
     const {
       title,
@@ -72,13 +71,9 @@ export async function POST(request: Request) {
       round,
     } = body
 
-    if (!title || !description) {
-      return NextResponse.json(
-        { error: "Title and description are required" },
-        { status: 400 }
-      )
-    }
-
+    // Use shared validation (Comment 3)
+    const { validateProblem, sanitizeHtml } = await import('@/lib/validation')
+    
     const problemData = {
       title,
       description,
@@ -94,7 +89,20 @@ export async function POST(request: Request) {
       round: round || 1,
     }
 
-    console.log("Creating problem with data:", problemData)
+    // Validate problem data
+    const validation = validateProblem(problemData)
+    if (!validation.valid) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validation.errors },
+        { status: 400 }
+      )
+    }
+
+    // Sanitize HTML content to prevent XSS
+    problemData.description = sanitizeHtml(problemData.description)
+    if (problemData.constraints) {
+      problemData.constraints = sanitizeHtml(problemData.constraints)
+    }
 
     const problem = await Problem.create(problemData)
 

@@ -6,6 +6,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { HelpCircle, MessageCircle } from "lucide-react"
+import { BackgroundBeams } from "@/components/ui/background-beams"
+import { Spotlight } from "@/components/ui/spotlight"
+import { TextGenerateEffect } from "@/components/ui/text-generate-effect"
 
 const faqs = [
   {
@@ -52,23 +55,26 @@ const faqs = [
 
 export default function FAQPage() {
   return (
-    <div className="min-h-screen bg-[#151c2e] py-8 pt-24">
-      <div className="container mx-auto px-4 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
-            <HelpCircle className="h-8 w-8 text-[#6aa5ff]" />
-            Frequently Asked Questions
-          </h1>
-          <p className="text-white/60">Find answers to common questions about the hackathon</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-sky-50 py-8 pt-24 relative">
+      <BackgroundBeams />
+      <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="rgba(59, 130, 246, 0.4)" />
+      <div className="container mx-auto px-4 max-w-4xl relative z-10">
+        <div className="mb-8 text-center">
+          <HelpCircle className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+          <TextGenerateEffect 
+            words="Frequently Asked Questions"
+            className="text-4xl font-bold text-gray-900 mb-2"
+          />
+          <p className="text-gray-600">Find answers to common questions about the hackathon</p>
         </div>
 
-        <Card className="bg-[#192345] border-[#6aa5ff]/20">
-          <CardHeader className="border-b border-[#6aa5ff]/10">
-            <CardTitle className="text-white flex items-center gap-2">
-              <MessageCircle className="h-5 w-5 text-[#6aa5ff]" />
+        <Card className="bg-white/80 backdrop-blur-sm border-blue-200 shadow-xl">
+          <CardHeader className="border-b border-blue-100">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-blue-600" />
               Common Questions
             </CardTitle>
-            <CardDescription className="text-white/60">
+            <CardDescription className="text-gray-600">
               Browse through our FAQ to find answers
             </CardDescription>
           </CardHeader>
@@ -78,12 +84,12 @@ export default function FAQPage() {
                 <AccordionItem 
                   key={index} 
                   value={`item-${index}`}
-                  className="border-[#6aa5ff]/10"
+                  className="border-blue-100"
                 >
-                  <AccordionTrigger className="text-left text-white hover:text-[#6aa5ff] transition-colors">
+                  <AccordionTrigger className="text-left text-gray-900 hover:text-blue-600 transition-colors">
                     {faq.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-white/70">
+                  <AccordionContent className="text-gray-600">
                     {faq.answer}
                   </AccordionContent>
                 </AccordionItem>

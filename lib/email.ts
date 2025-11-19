@@ -1,12 +1,22 @@
 import nodemailer from "nodemailer"
 
+const EMAIL_HOST = process.env.EMAIL_SERVER_HOST
+const EMAIL_PORT = parseInt(process.env.EMAIL_SERVER_PORT || "587")
+const EMAIL_USER = process.env.EMAIL_SERVER_USER
+const EMAIL_PASS = process.env.EMAIL_SERVER_PASSWORD
+const EMAIL_FROM = process.env.EMAIL_FROM
+
+if (!EMAIL_HOST || !EMAIL_USER || !EMAIL_PASS || !EMAIL_FROM) {
+  console.warn('Warning: Email configuration incomplete. Email sending will fail.')
+}
+
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_SERVER_HOST,
-  port: parseInt(process.env.EMAIL_SERVER_PORT || "587"),
-  secure: false,
+  host: EMAIL_HOST,
+  port: EMAIL_PORT,
+  secure: EMAIL_PORT === 465,
   auth: {
-    user: process.env.EMAIL_SERVER_USER,
-    pass: process.env.EMAIL_SERVER_PASSWORD,
+    user: EMAIL_USER,
+    pass: EMAIL_PASS,
   },
 })
 

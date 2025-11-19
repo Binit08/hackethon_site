@@ -8,6 +8,7 @@ export interface IUser extends Document {
   emailVerified?: Date
   image?: string
   teamId?: mongoose.Types.ObjectId
+  faceDescriptor?: number[] // 128-dimensional vector for face recognition
   createdAt: Date
   updatedAt: Date
 }
@@ -40,6 +41,17 @@ const UserSchema = new Schema<IUser>(
     teamId: {
       type: Schema.Types.ObjectId,
       ref: 'Team',
+    },
+    faceDescriptor: {
+      type: [Number],
+      default: undefined,
+      validate: {
+        validator: function(v: number[]) {
+          // If present, must be exactly 128 numbers
+          return !v || (Array.isArray(v) && v.length === 128 && v.every(n => typeof n === 'number'))
+        },
+        message: 'Face descriptor must be an array of exactly 128 numbers'
+      }
     },
   },
   {

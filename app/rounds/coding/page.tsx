@@ -56,6 +56,8 @@ export default function CodingRoundPage() {
   const router = useRouter()
   const { toast } = useToast()
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const submittingRef = useRef(false) // Prevent duplicate submissions (Comment 6)
+  const hasSubmittedRef = useRef(false) // Track if already submitted (Comment 6)
 
   const fetchProblems = useCallback(async () => {
     try {
@@ -170,6 +172,11 @@ export default function CodingRoundPage() {
   })
 
   const handleSubmit = async () => {
+    // Prevent duplicate submissions (Comment 6)
+    if (submittingRef.current || hasSubmittedRef.current) {
+      return
+    }
+    
     if (!selectedProblem || !code.trim()) {
       toast({
         title: "Error",
@@ -179,6 +186,7 @@ export default function CodingRoundPage() {
       return
     }
 
+    submittingRef.current = true
     setSubmitting(true)
     try {
       const response = await fetch("/api/submissions", {
@@ -203,6 +211,7 @@ export default function CodingRoundPage() {
 
       const result = await response.json()
 
+      hasSubmittedRef.current = true // Mark as submitted (Comment 6)
       toast({
         title: "Submitted",
         description: "Your code has been queued for evaluation.",
@@ -215,6 +224,7 @@ export default function CodingRoundPage() {
         description: "Failed to submit code",
         variant: "destructive",
       })
+      submittingRef.current = false // Allow retry on error
     } finally {
       setSubmitting(false)
     }
@@ -232,10 +242,14 @@ export default function CodingRoundPage() {
     }
 
     const autoSubmit = () => {
-      if (!hasWork()) return
+      // Prevent duplicate auto-submissions (Comment 6)
+      if (!hasWork() || submittingRef.current || hasSubmittedRef.current) return
+      
+      submittingRef.current = true
       try {
         const blob = new Blob([makeBeaconPayload()], { type: 'application/json' })
         navigator.sendBeacon('/api/submissions/auto', blob)
+        hasSubmittedRef.current = true // Mark as submitted
       } catch (e) {
         fetch('/api/submissions/auto', {
           method: 'POST',
@@ -282,6 +296,8 @@ export default function CodingRoundPage() {
   }, [selectedProblem, code, language, toast])
 
   const handleRun = async () => {
+    console.log('handleRun called', { selectedProblem: !!selectedProblem, code: code?.length || 0 })
+    
     if (!selectedProblem || !code.trim()) {
       toast({
         title: "Error",
@@ -293,6 +309,9 @@ export default function CodingRoundPage() {
     setRunning(true)
     setConsoleOutput((prev) => prev ? prev + "\n---\n" : "")
     setConsoleOutput((prev) => prev + `[Run] Problem: ${selectedProblem.title}\nLanguage: ${language}\nInput: ${customInput || selectedProblem.sampleInput || "<none>"}\n\nProcessing...\n`)
+    
+    console.log('Making API call to /api/run')
+    
     try {
       const response = await fetch("/api/run", {
         method: "POST",
@@ -304,11 +323,17 @@ export default function CodingRoundPage() {
           input: customInput || selectedProblem.sampleInput || "",
         }),
       })
+      
+      console.log('Response received:', response.status)
+      
       if (!response.ok) {
         const error = await response.json().catch(() => ({ error: "Run failed" }))
         throw new Error(error.error || "Run failed")
       }
       const result = await response.json()
+      
+      console.log('Result:', result)
+      
       setConsoleOutput((prev) => prev + `Status: ${result.status}\nVerdict: ${result.verdict}\n`)
       if (result.stdout) {
         setConsoleOutput((prev) => prev + `\nStdout:\n${result.stdout}\n`)
@@ -327,6 +352,7 @@ export default function CodingRoundPage() {
         setConsoleOutput((prev) => prev + `Memory Used: ${result.metrics.memoryKB ? (result.metrics.memoryKB / 1024).toFixed(2) : "N/A"} MB\n`)
       }
     } catch (err: any) {
+      console.error('Run error:', err)
       setConsoleOutput((prev) => prev + `Error: ${err?.message || "Unknown error"}\n`)
       toast({
         title: "Run failed",
@@ -340,26 +366,24 @@ export default function CodingRoundPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#151c2e] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6aa5ff]" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#151c2e] text-white relative overflow-hidden">
+    <div className="min-h-screen bg-gray-50 text-gray-900 relative overflow-hidden">
       {/* Round access gating banners */}
       {/* Banners removed per request; gating logic retained without visual notices */}
       
-      {/* Background & Glass Effect - matching homepage */}
+      {/* Background & Glass Effect - light theme */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(87,97,255,0.15),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(255,75,149,0.12),transparent_55%)]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/50" />
       </div>
-      <div className="absolute inset-0 bg-white/0 backdrop-blur-[2px]" />
 
   {/* Top bar */}
-      <div className="z-10 w-full border-b border-[#6aa5ff]/20 bg-[#192345]/80 backdrop-blur supports-[backdrop-filter]:bg-[#192345]/60 sticky top-0">
+      <div className="z-10 w-full border-b border-gray-200 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 sticky top-0 shadow-sm">
         <div className="container mx-auto px-4 py-3 flex flex-wrap gap-3 items-center justify-between">
           <div className="flex items-center gap-3">
             <Select
@@ -371,12 +395,12 @@ export default function CodingRoundPage() {
                 setConsoleOutput("")
               }}
             >
-              <SelectTrigger className="w-60 bg-[#232b4d] border-[#6aa5ff]/20 text-white">
+              <SelectTrigger className="w-60 bg-white border-gray-300">
                 <SelectValue placeholder="Select problem" />
               </SelectTrigger>
-              <SelectContent className="bg-[#232b4d] border-[#6aa5ff]/20">
+              <SelectContent className="bg-white border-gray-200">
                 {problems.map((problem) => (
-                  <SelectItem key={problem.id || problem._id} value={problem.id || problem._id} className="text-white">
+                  <SelectItem key={problem.id || problem._id} value={problem.id || problem._id}>
                     {problem.title} ({problem.points} pts)
                   </SelectItem>
                 ))}
@@ -385,9 +409,9 @@ export default function CodingRoundPage() {
 
             {selectedProblem && (
               <div className="hidden md:flex items-center gap-2 text-xs">
-                <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 font-medium">{selectedProblem.points} pts</span>
-                <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 font-medium">{selectedProblem.timeLimit}m</span>
-                <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 font-medium">{selectedProblem.memoryLimit}MB</span>
+                <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 font-medium">{selectedProblem.points} pts</span>
+                <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">{selectedProblem.timeLimit}m</span>
+                <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 font-medium">{selectedProblem.memoryLimit}MB</span>
               </div>
             )}
           </div>
@@ -395,14 +419,14 @@ export default function CodingRoundPage() {
           <div className="flex items-center gap-2">
             {/* Disable action buttons if locked */}
             <Select value={language} onValueChange={setLanguage}>
-              <SelectTrigger className="w-36 bg-[#232b4d] border-[#6aa5ff]/20 text-white">
+              <SelectTrigger className="w-36 bg-white border-gray-300">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#232b4d] border-[#6aa5ff]/20">
-                <SelectItem value="javascript" className="text-white">JavaScript</SelectItem>
-                <SelectItem value="python" className="text-white">Python</SelectItem>
-                <SelectItem value="java" className="text-white">Java</SelectItem>
-                <SelectItem value="cpp" className="text-white">C++</SelectItem>
+              <SelectContent className="bg-white border-gray-200">
+                <SelectItem value="javascript">JavaScript</SelectItem>
+                <SelectItem value="python">Python</SelectItem>
+                <SelectItem value="java">Java</SelectItem>
+                <SelectItem value="cpp">C++</SelectItem>
               </SelectContent>
             </Select>
 
@@ -410,16 +434,23 @@ export default function CodingRoundPage() {
               variant="outline"
               onClick={() => setEditorFullscreen((v) => !v)}
               title={editorFullscreen ? "Exit fullscreen" : "Fullscreen editor"}
-              className="bg-[#232b4d] border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/20 text-white"
+              className="border-gray-300 hover:bg-gray-100"
             >
               {editorFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
 
             <Button 
-              onClick={handleRun} 
-              disabled={running || !selectedProblem || (!allowOffschedule && (roundStatus && roundStatus.round2.window === 'active' && !roundStatus.round1.qualified))} 
+              onClick={() => {
+                console.log('Run button clicked!', { 
+                  running, 
+                  selectedProblem: selectedProblem?.title,
+                  codeLength: code?.length 
+                })
+                handleRun()
+              }} 
+              disabled={running || !selectedProblem} 
               variant="outline"
-              className="bg-green-500/20 border-green-500/30 hover:bg-green-500/30 text-green-400"
+              className="bg-green-50 border-green-300 hover:bg-green-100 text-green-700"
             >
               {running ? (
                 <>
@@ -437,14 +468,14 @@ export default function CodingRoundPage() {
               disabled={!consoleOutput}
               onClick={() => setConsoleOutput("")}
               title="Clear console"
-              className="bg-[#232b4d] border-[#6aa5ff]/30 hover:bg-[#6aa5ff]/20 text-white"
+              className="border-gray-300 hover:bg-gray-100"
             >
               <TimerReset className="mr-2 h-4 w-4" /> Reset
             </Button>
             <Button 
               onClick={handleSubmit} 
-              disabled={submitting || !selectedProblem || (!allowOffschedule && (roundStatus && roundStatus.round2.window === 'active' && !roundStatus.round1.qualified))}
-              className="bg-[#6aa5ff] hover:bg-[#3c7dff]"
+              disabled={submitting || !selectedProblem}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {submitting ? (
                 <>
@@ -468,43 +499,43 @@ export default function CodingRoundPage() {
             <div className="relative grid grid-cols-1 lg:grid-cols-5 gap-4 h-full">
               {/* Left: Problem panel */}
               <div className={editorFullscreen ? "hidden" : "lg:col-span-2"}>
-                <Card className="h-full bg-[#192345] border-[#6aa5ff]/20">
+                <Card className="h-full bg-white border-gray-200 shadow-sm">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-white text-xl">{selectedProblem ? selectedProblem.title : "Problem"}</CardTitle>
-                    <CardDescription className="text-white/70">
+                    <CardTitle className="text-gray-900 text-xl">{selectedProblem ? selectedProblem.title : "Problem"}</CardTitle>
+                    <CardDescription className="text-gray-600">
                       {selectedProblem ? `${selectedProblem.points} points • ${selectedProblem.timeLimit} min limit` : "Select a problem to view details"}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="h-[calc(100%-5rem)] overflow-auto">
                     {selectedProblem ? (
                       <Tabs defaultValue="description" className="h-full flex flex-col">
-                        <TabsList className="w-full bg-[#232b4d] border border-[#6aa5ff]/20">
-                          <TabsTrigger value="description" className="flex-1 data-[state=active]:bg-[#6aa5ff] data-[state=active]:text-white text-white/70">Description</TabsTrigger>
-                          <TabsTrigger value="samples" className="flex-1 data-[state=active]:bg-[#6aa5ff] data-[state=active]:text-white text-white/70">Examples</TabsTrigger>
-                          <TabsTrigger value="constraints" className="flex-1 data-[state=active]:bg-[#6aa5ff] data-[state=active]:text-white text-white/70">Constraints</TabsTrigger>
+                        <TabsList className="w-full bg-gray-100 border border-gray-200">
+                          <TabsTrigger value="description" className="flex-1 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-600">Description</TabsTrigger>
+                          <TabsTrigger value="samples" className="flex-1 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-600">Examples</TabsTrigger>
+                          <TabsTrigger value="constraints" className="flex-1 data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-600">Constraints</TabsTrigger>
                         </TabsList>
                         <TabsContent value="description" className="flex-1 overflow-auto mt-4">
-                          <div className="prose prose-sm prose-invert max-w-none whitespace-pre-wrap text-white/90">
+                          <div className="prose prose-sm max-w-none whitespace-pre-wrap text-gray-800">
                             {selectedProblem.description}
                           </div>
                         </TabsContent>
                         <TabsContent value="samples" className="flex-1 overflow-auto mt-4 space-y-4">
                           {selectedProblem.sampleInput && (
                             <div>
-                              <h4 className="font-semibold mb-2 text-[#6aa5ff]">Sample Input</h4>
-                              <pre className="bg-[#232b4d] border border-[#6aa5ff]/20 p-4 rounded-lg text-sm overflow-x-auto text-white/90">{selectedProblem.sampleInput}</pre>
+                              <h4 className="font-semibold mb-2 text-blue-700">Sample Input</h4>
+                              <pre className="bg-gray-50 border border-gray-300 p-4 rounded-lg text-sm overflow-x-auto text-gray-800">{selectedProblem.sampleInput}</pre>
                             </div>
                           )}
                           {selectedProblem.sampleOutput && (
                             <div>
-                              <h4 className="font-semibold mb-2 text-[#6aa5ff]">Sample Output</h4>
-                              <pre className="bg-[#232b4d] border border-[#6aa5ff]/20 p-4 rounded-lg text-sm overflow-x-auto text-white/90">{selectedProblem.sampleOutput}</pre>
+                              <h4 className="font-semibold mb-2 text-blue-700">Sample Output</h4>
+                              <pre className="bg-gray-50 border border-gray-300 p-4 rounded-lg text-sm overflow-x-auto text-gray-800">{selectedProblem.sampleOutput}</pre>
                             </div>
                           )}
                           <div>
-                            <h4 className="font-semibold mb-2 text-[#6aa5ff]">Custom Input (Optional)</h4>
+                            <h4 className="font-semibold mb-2 text-blue-700">Custom Input (Optional)</h4>
                             <textarea
-                              className="w-full h-32 rounded-lg border border-[#6aa5ff]/20 bg-[#232b4d] p-3 text-sm text-white focus:border-[#6aa5ff] focus:outline-none focus:ring-2 focus:ring-[#6aa5ff]/20"
+                              className="w-full h-32 rounded-lg border border-gray-300 bg-white p-3 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
                               placeholder="Enter custom input to test your code..."
                               value={customInput}
                               onChange={(e) => setCustomInput(e.target.value)}
@@ -512,13 +543,13 @@ export default function CodingRoundPage() {
                           </div>
                         </TabsContent>
                         <TabsContent value="constraints" className="flex-1 overflow-auto mt-4">
-                          <div className="text-sm text-white/80 whitespace-pre-wrap bg-[#232b4d] border border-[#6aa5ff]/20 p-4 rounded-lg">
+                          <div className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 border border-gray-300 p-4 rounded-lg">
                             {selectedProblem.constraints || "No specific constraints provided."}
                           </div>
                         </TabsContent>
                       </Tabs>
                     ) : (
-                      <div className="text-sm text-white/60">Select a problem to get started.</div>
+                      <div className="text-sm text-gray-500">Select a problem to get started.</div>
                     )}
                   </CardContent>
                 </Card>
@@ -528,18 +559,18 @@ export default function CodingRoundPage() {
               <div className={editorFullscreen ? "lg:col-span-5" : "lg:col-span-2"}>
                 <div className="h-full flex flex-col gap-4">
                   {/* Code editor panel */}
-                  <Card className="flex-1 overflow-hidden bg-[#192345] border-[#6aa5ff]/20">
-                    <CardHeader className="py-3 px-4 bg-[#232b4d]/60 border-b border-[#6aa5ff]/20">
+                  <Card className="flex-1 overflow-hidden bg-white border-gray-200 shadow-sm">
+                    <CardHeader className="py-3 px-4 bg-gray-50 border-b border-gray-200">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-white">Code Editor</span>
-                        <span className="text-xs text-white/60">Ctrl+Enter to Run • Shift+Enter to Submit</span>
+                        <span className="text-sm font-semibold text-gray-900">Code Editor</span>
+                        <span className="text-xs text-gray-600">Ctrl+Enter to Run • Shift+Enter to Submit</span>
                       </div>
                     </CardHeader>
                     <CardContent className="p-0 h-[calc(100%-3.5rem)]">
                       <MonacoEditor
                         height="100%"
                         language={language === "cpp" ? "cpp" : language}
-                        theme="vs-dark"
+                        theme="vs-light"
                         value={code}
                         onChange={(val) => setCode(val || "")}
                         options={{
@@ -555,22 +586,22 @@ export default function CodingRoundPage() {
                   </Card>
 
                   {/* Console output panel */}
-                  <Card className="h-64 overflow-hidden bg-[#192345] border-[#6aa5ff]/20">
-                    <CardHeader className="py-3 px-4 bg-[#232b4d]/60 border-b border-[#6aa5ff]/20">
+                  <Card className="h-64 overflow-hidden bg-white border-gray-200 shadow-sm">
+                    <CardHeader className="py-3 px-4 bg-gray-50 border-b border-gray-200">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-white flex items-center gap-2">
-                          <Terminal className="h-4 w-4 text-[#6aa5ff]" />
+                        <span className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                          <Terminal className="h-4 w-4 text-blue-600" />
                           Console Output
                         </span>
                         {consoleOutput && (
-                          <span className="text-xs text-green-400">● Ready</span>
+                          <span className="text-xs text-green-600">● Ready</span>
                         )}
                       </div>
                     </CardHeader>
-                    <CardContent className="p-4 h-[calc(100%-3.5rem)] overflow-auto bg-[#0d1117]">
-                      <pre className="text-sm font-mono whitespace-pre-wrap text-white/90">
+                    <CardContent className="p-4 h-[calc(100%-3.5rem)] overflow-auto bg-gray-900">
+                      <pre className="text-sm font-mono whitespace-pre-wrap text-green-400">
                         {consoleOutput || (
-                          <span className="text-white/50 italic">Click &apos;Run&apos; to execute your code and see output here...</span>
+                          <span className="text-gray-400 italic">Click &apos;Run&apos; to execute your code and see output here...</span>
                         )}
                       </pre>
                     </CardContent>

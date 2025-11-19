@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextResponse, NextRequest } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import connectDB from "@/lib/mongodb"
@@ -7,6 +7,7 @@ import User from "@/models/User"
 import Problem from "@/models/Problem"
 import MCQAnswer from "@/models/MCQAnswer"
 import MCQOption from "@/models/MCQOption"
+import { rateLimit, RATE_LIMITS, getRateLimitIdentifier } from "@/middleware/rate-limit"
 
 export async function GET(request: Request) {
   try {
