@@ -75,6 +75,8 @@ export default function AdminPage() {
     newTeams24h: 0,
   })
   const [recentSubmissions, setRecentSubmissions] = useState<any[]>([])
+  const [allSubmissions, setAllSubmissions] = useState<any[]>([])
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false)
   const mountedRef = useRef(true)
   const { toast } = useToast()
 
@@ -151,6 +153,26 @@ export default function AdminPage() {
       console.error('Failed to fetch recent submissions:', err)
     }
   }, [])
+
+  const fetchAllSubmissions = useCallback(async () => {
+    setLoadingSubmissions(true)
+    try {
+      const res = await fetch('/api/submissions')
+      if (res.ok) {
+        const data = await res.json()
+        setAllSubmissions(Array.isArray(data) ? data : [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch all submissions:', err)
+      toast({
+        title: "Error",
+        description: "Failed to fetch submissions",
+        variant: "destructive"
+      })
+    } finally {
+      setLoadingSubmissions(false)
+    }
+  }, [toast])
 
   useEffect(() => {
     mountedRef.current = true
@@ -581,11 +603,85 @@ export default function AdminPage() {
             <TabsContent value="submissions">
               <Card className="bg-white/80 backdrop-blur-xl border-blue-200 shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-gray-900 text-2xl">All Submissions</CardTitle>
-                  <CardDescription className="text-gray-600">View and manage all submissions</CardDescription>
+                  <CardTitle className="text-gray-900 text-2xl flex items-center gap-2">
+                    <FileText className="h-6 w-6 text-blue-600" />
+                    All Submissions
+                  </CardTitle>
+                  <CardDescription className="text-gray-600">View and manage all submissions from participants</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600 bg-blue-50 p-6 rounded-xl border border-blue-200">Submissions view will be implemented here.</p>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <p className="text-gray-600">Total submissions: {allSubmissions.length}</p>
+                      <Button 
+                        onClick={fetchAllSubmissions}
+                        disabled={loadingSubmissions}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {loadingSubmissions ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Refresh
+                      </Button>
+                    </div>
+
+                    {loadingSubmissions ? (
+                      <div className="flex justify-center items-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                      </div>
+                    ) : allSubmissions.length === 0 ? (
+                      <div className="text-center py-12 bg-blue-50 rounded-xl border border-blue-200">
+                        <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600">No submissions yet. Click refresh to load submissions.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="bg-blue-100 border-b-2 border-blue-300">
+                              <th className="text-left p-3 text-gray-900 font-semibold">User</th>
+                              <th className="text-left p-3 text-gray-900 font-semibold">Problem</th>
+                              <th className="text-left p-3 text-gray-900 font-semibold">Language</th>
+                              <th className="text-left p-3 text-gray-900 font-semibold">Status</th>
+                              <th className="text-left p-3 text-gray-900 font-semibold">Score</th>
+                              <th className="text-left p-3 text-gray-900 font-semibold">Submitted At</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {allSubmissions.map((sub: any, idx: number) => (
+                              <tr 
+                                key={sub._id || idx} 
+                                className={`border-b border-blue-100 hover:bg-blue-50 transition-colors ${
+                                  idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/50'
+                                }`}
+                              >
+                                <td className="p-3 text-gray-900">{sub.userId?.name || 'Unknown'}</td>
+                                <td className="p-3 text-gray-900">{sub.problemId?.title || 'Unknown Problem'}</td>
+                                <td className="p-3 text-gray-600 uppercase">{sub.language || 'N/A'}</td>
+                                <td className="p-3">
+                                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                    sub.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' :
+                                    sub.status === 'WRONG_ANSWER' ? 'bg-red-100 text-red-700' :
+                                    sub.status === 'COMPILATION_ERROR' ? 'bg-orange-100 text-orange-700' :
+                                    sub.status === 'RUNTIME_ERROR' ? 'bg-red-100 text-red-700' :
+                                    sub.status === 'TIME_LIMIT_EXCEEDED' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {sub.status?.replace(/_/g, ' ') || 'PENDING'}
+                                  </span>
+                                </td>
+                                <td className="p-3">
+                                  <span className="text-gray-900 font-semibold">{sub.score}</span>
+                                  <span className="text-gray-500 text-sm"> / {sub.problemId?.points || 100}</span>
+                                </td>
+                                <td className="p-3 text-gray-600 text-sm">
+                                  {new Date(sub.submittedAt).toLocaleString()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
