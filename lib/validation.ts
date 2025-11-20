@@ -5,8 +5,6 @@
  * Implements ERROR #3: Unvalidated Face Descriptor Data
  */
 
-import DOMPurify from 'isomorphic-dompurify'
-
 /**
  * Validate team name format
  */
@@ -132,12 +130,35 @@ export function validateFaceDescriptor(descriptor: any): { valid: boolean; error
 
 /**
  * Sanitize HTML content to prevent XSS
+ * Simple server-side sanitizer that strips all HTML tags except allowed ones
  */
 export function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li', 'code', 'pre'],
-    ALLOWED_ATTR: [],
+  if (!html) return ''
+  
+  // First, escape all HTML
+  let sanitized = html
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+  
+  // Then, restore allowed tags (convert back to < and >)
+  const allowedTags = ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li', 'code', 'pre']
+  allowedTags.forEach(tag => {
+    // Opening tags (without attributes)
+    sanitized = sanitized.replace(
+      new RegExp(`&lt;(${tag})&gt;`, 'gi'),
+      '<$1>'
+    )
+    // Closing tags
+    sanitized = sanitized.replace(
+      new RegExp(`&lt;/(${tag})&gt;`, 'gi'),
+      '</$1>'
+    )
   })
+  
+  return sanitized
 }
 
 /**
